@@ -2,6 +2,9 @@
 
 #include "pch.h"
 
+#include "Base.h"
+#include "Engine/Log/Log.h"
+
 namespace tsEngine
 {
 	class Application

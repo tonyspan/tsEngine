@@ -1,5 +1,6 @@
 workspace "tsEngine"
 	architecture "x64"
+	startproject "Game"
 
 	configurations
 	{
@@ -31,7 +32,10 @@ project "Engine"
 
 	includedirs
 	{
-		"%{prj.name}/src"
+		"%{prj.name}/src",
+		
+		--spdlog
+		"%{prj.name}/vendor/spdlog/include"
 	}
 
 	filter "system:windows"
@@ -61,7 +65,8 @@ project "Game"
 	includedirs
 	{
 		--Engine
-		"Engine/src"
+		"Engine/src",
+		"Engine/vendor/spdlog/include"
 	}
 
 	links
