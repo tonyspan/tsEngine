@@ -7,6 +7,8 @@
 
 namespace tsEngine
 {
+	Ref<spdlog::logger> Log::s_Logger;
+
 	void Log::Init()
 	{
 		std::vector<spdlog::sink_ptr> logSinks;

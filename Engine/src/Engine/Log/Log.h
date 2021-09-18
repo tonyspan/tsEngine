@@ -17,7 +17,7 @@ namespace tsEngine
         Log(const Log& other) = delete;
         Log& operator=(Log& other) = delete;
     private:
-        inline static Ref<spdlog::logger> s_Logger;
+        static Ref<spdlog::logger> s_Logger;
     };
 }
 
