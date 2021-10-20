@@ -5,6 +5,8 @@ bin-int/
 
 # Files
 *.log
+imgui.ini
+!EngineEd/imgui.ini
 
 # Visual Studio files and folder
 .vs/

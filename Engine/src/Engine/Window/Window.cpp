@@ -3,18 +3,31 @@
 #include "Window.h"
 #include "Engine/Log/Log.h"
 
+#include <SDL_image.h>
+
 namespace tsEngine
 {
-    bool Window::Init(const WindowData& props)
+    void Window::AddWindowIcon()
     {
-        m_WindowData.Title = props.Title;
-        m_WindowData.Width = props.Width;
-        m_WindowData.Height = props.Height;
-        m_WindowData.VSync = props.VSync;
+        SDL_Surface* iconSurface = IMG_Load(m_WindowData.Icon.c_str());
+
+        if (iconSurface)
+        {
+            SDL_SetWindowIcon(m_NativeWindow.get(), iconSurface);
+            SDL_FreeSurface(iconSurface);
+        }
+    }
+
+    bool Window::Init(const WindowProps& props)
+    {
+        m_WindowData = props;
 
         LOG_INFO("Creating window {0} ({1}, {2})", props.Title, props.Width, props.Height);
 
-        m_NativeWindow.reset(SDL_CreateWindow(m_WindowData.Title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, m_WindowData.Width, m_WindowData.Height, 0));
+        auto flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+        m_NativeWindow.reset(SDL_CreateWindow(m_WindowData.Title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, m_WindowData.Width, m_WindowData.Height, flags));
+
+        AddWindowIcon();
 
         if (!m_NativeWindow)
         {
@@ -22,8 +35,6 @@ namespace tsEngine
             
             return false;
         }
-
-        //SDL_HideWindow(m_NativeWindowHandle.get());
         
         return true;
     }
@@ -33,6 +44,11 @@ namespace tsEngine
         LOG_INFO("Destroying window");
 
         return true;
+    }
+
+    Window::Window(const WindowProps& props)
+    {
+        Init(props);
     }
 
     SDL_Window* Window::GetNativeWindow() const

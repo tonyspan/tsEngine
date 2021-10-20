@@ -1,0 +1,45 @@
+Workspace: Untitled
+Entities:
+  - Entity: 3
+    TagComponent:
+      Tag: text
+    TransformComponent:
+      Position: [-121, -183]
+      Size: [550, 120]
+      Rotation: 0
+    TextComponent:
+      Text: Hello There
+      MultiplierFactor: 10
+      Color: [0.396078438, 0.396078438, 0.396078438, 0]
+  - Entity: 2
+    TagComponent:
+      Tag: circle
+    TransformComponent:
+      Position: [214, 44]
+      Size: [100, 100]
+      Rotation: 0
+    CircleComponent:
+      Color: [0.368627459, 0.486274511, 0.662745118, 0]
+      DrawPhysicsCollider: true
+    CollisionComponent:
+      Shape: AABox
+      Size: [100, 100]
+  - Entity: 1
+    TagComponent:
+      Tag: box
+    TransformComponent:
+      Position: [-337, 67]
+      Size: [100, 100]
+      Rotation: 0
+    SpriteComponent:
+      Color: [0.772549033, 0.611764729, 0.611764729, 0]
+      DrawPhysicsCollider: false
+  - Entity: 1048576
+    TagComponent:
+      Tag: MainCamera
+    TransformComponent:
+      Position: [0, 0]
+      Size: [1170, 580]
+      Rotation: 0
+    CameraComponent:
+      PanSpeed: 100

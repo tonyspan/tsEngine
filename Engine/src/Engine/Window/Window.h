@@ -5,51 +5,53 @@
 
 #include <SDL.h>
 
-constexpr uint32_t DEFAULT_WIDTH = 1600;
-constexpr uint32_t DEFAULT_HEIGHT = 900;
-
 namespace tsEngine
 {
-	struct WindowData
+	constexpr uint32_t DEFAULT_WIDTH = 1600;
+	constexpr uint32_t DEFAULT_HEIGHT = 900;
+	
+	struct WindowProps
 	{
 		std::string Title;
 		uint32_t Width;
 		uint32_t Height;
+		std::string Icon;
 		bool VSync = false;
 
-		WindowData(const std::string& title = "tsEngine", uint32_t width = DEFAULT_WIDTH, uint32_t height = DEFAULT_HEIGHT)
+		WindowProps(const std::string& title = "tsEngine", uint32_t width = DEFAULT_WIDTH, uint32_t height = DEFAULT_HEIGHT)
 			: Title(title), Width(width), Height(height)
 		{
 		}
 	};
 
+	class Window
+	{
+	public:
+		Window(const WindowProps& props = WindowProps());
+		~Window();
 
-    class Window
-    {
-    public:
-        Window(const WindowData& props = WindowData()) { Init(props); }
-        ~Window();
+		SDL_Window* GetNativeWindow() const;
 
-        SDL_Window* GetNativeWindow() const;
+		void SetWidth(uint32_t width) { m_WindowData.Width = width; }
+		void SetHeight(uint32_t height) { m_WindowData.Height = height; }
 
-    private:
-        Window(const Window& other) = delete;
-        Window& operator=(Window& other) = delete;
+		uint32_t GetWidth() { return m_WindowData.Width; }
+		uint32_t GetHeight() { return m_WindowData.Height; }
 
-        bool Init(const WindowData& props);
-        bool Shutdown();
+		bool GetVSync() { return m_WindowData.VSync; }
 
-        struct DestroySDLWwindow
-        {
-            void operator()(SDL_Window* ptr)
-            {
-                SDL_DestroyWindow(ptr);
-            }
+		void SetWindowData(const WindowProps& props) { m_WindowData = props; }
 
-        };
-    private:
-        WindowData m_WindowData;
-        std::unique_ptr<SDL_Window, DestroySDLWwindow> m_NativeWindow;
-    };
+	private:
+		Window(const Window& other) = delete;
+		Window& operator=(Window& other) = delete;
+
+		bool Init(const WindowProps& props);
+		bool Shutdown();
+		void AddWindowIcon();
+	private:
+		WindowProps m_WindowData;
+		Scope2<SDL_Window, SDL_DestroyWindow> m_NativeWindow;
+	};
 }
 
