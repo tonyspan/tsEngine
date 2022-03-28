@@ -18,6 +18,7 @@ namespace tsEngine
 
 		entt::entity CreateEntity(const std::string& name = std::string());
 		void DestroyEntity(entt::entity entity);
+		void DestroyEntityByTag(const std::string& tag);
 
 		template<typename T, typename... Args>
 		void AddComponent(entt::entity entity, Args&&... args)
@@ -59,6 +60,8 @@ namespace tsEngine
 			return m_Registry.view<Args...>();
 		}
 
+		entt::entity FindEntityByTag(const std::string& tag);
+
 		template<typename T>
 		auto& AddNativeScript(entt::entity entity)
 		{
@@ -69,20 +72,18 @@ namespace tsEngine
 			return m_Registry.get<NativeScriptComponent>(entity);
 		}
 
-		// TODO: Not the best/proper way to access registry from ScriptableEntity or other places
+		// NOTE: Leftover from a different approach
 		auto& GetRegistry()
 		{
 			return m_Registry;
 		}
 
-		static void ClearRegistry(entt::registry& registry);
+		void Clear();
 
-		// NOTE: Call CopyComponent for any newly added component
-		static void CopyRegistryAndComponents(entt::registry& dst, entt::registry& src);
-
+		void CopyRegistryAndComponents(Ref<EntityManager>& other);
 	private:
 		template<typename T>
-		static void CopyComponent(entt::registry& dst, entt::registry& src)
+		void CopyComponent(entt::registry& dst, entt::registry& src)
 		{
 			auto view = src.view<T>();
 

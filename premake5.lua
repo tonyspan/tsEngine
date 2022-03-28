@@ -58,6 +58,9 @@ project "Engine"
 		--ImGui
 		"%{prj.name}/vendor/imgui",
 
+		--tinyfiledialogs
+		"%{prj.name}/vendor/tinyfiledialogs",
+
 		--entt
 		"%{prj.name}/vendor/entt/include"
 	}
@@ -78,7 +81,8 @@ project "Engine"
 		"SDL2_mixer",
 
 		"imgui",
-		"yaml-cpp"
+		"yaml-cpp",
+		"tinyfiledialogs"
 	}
 
 	filter "system:windows"
@@ -93,6 +97,7 @@ project "Engine"
 group "Dependencies"
 	include "Engine/vendor/imgui"
 	include "Engine/vendor/yaml-cpp"
+	include "Engine/vendor/tinyfiledialogs"
 group ""
 
 project "Sandbox"
@@ -118,8 +123,9 @@ project "Sandbox"
 		"Engine/vendor/spdlog/include",
 		"Engine/vendor/glm",
 		"Engine/vendor/SDL2/include",
-		"Engine/vendor/imgui",
+		--"Engine/vendor/imgui",
 		"Engine/vendor/yaml-cpp/include",
+		"Engine/vendor/tinyfiledialogs",
 		"Engine/vendor/entt/include"
 	}
 
@@ -170,8 +176,9 @@ project "Sandbox-NativeScript"
 		"Engine/vendor/spdlog/include",
 		"Engine/vendor/glm",
 		"Engine/vendor/SDL2/include",
-		"Engine/vendor/imgui",
+		--"Engine/vendor/imgui",
 		"Engine/vendor/yaml-cpp/include",
+		"Engine/vendor/tinyfiledialogs",
 		"Engine/vendor/entt/include"
 	}
 
@@ -224,6 +231,7 @@ project "EngineEd"
 		"Engine/vendor/SDL2/include",
 		"Engine/vendor/imgui",
 		"Engine/vendor/yaml-cpp/include",
+		"Engine/vendor/tinyfiledialogs",
 		"Engine/vendor/entt/include"
 	}
 

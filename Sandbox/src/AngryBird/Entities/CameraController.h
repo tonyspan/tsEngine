@@ -8,6 +8,5 @@ namespace Game
     {
     public:
         void OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager);
-        void OnUpdate(float ts, const tsEngine::Ref<tsEngine::EntityManager>& entityManager);
     };
 }

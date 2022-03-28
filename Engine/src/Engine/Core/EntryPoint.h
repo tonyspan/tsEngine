@@ -2,13 +2,10 @@
 
 #include "Engine/Core/Application.h"
 
+extern tsEngine::Application* tsEngine::CreateApplication();
+
 int main(int argc, char* args[])
 {
-    tsEngine::Log::Init();
-    LOG_INFO("Logger initialized!");
-
-    tsEngine::SDLVersion();
-
     auto app = tsEngine::CreateApplication();
 
     bool success = app->Init();

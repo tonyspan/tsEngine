@@ -1,45 +1,43 @@
 #pragma once
 
-#include "Engine/Window/Window.h"
+#include "Engine/Core/Base.h"
 
-#include "Engine/Render/Renderer.h"
-
-#include "Engine/ECS/EntityManager.h"
-#include "Engine/ECS/Components.h"
+#include "Camera.h"
 
 #include <glm/glm.hpp>
 
-//#include "imgui.h"
-//#include "imgui_impl_sdl.h"
-//#include "imgui_impl_sdlrenderer.h"
-
 namespace tsEngine
 {
-    class RenderManager
-    {
-    public:
-        RenderManager(const WindowProps& props = WindowProps());
-        ~RenderManager();
+	class EntityManager;
 
-        void OnUpdate(float ts, const Ref<EntityManager>& entityManager);
-        
-        Renderer* GetRenderer();
+	class Window;
 
-        CameraData& GetCamera();
+	class Renderer;
 
-        void SetBackgroundColor(const glm::u8vec4& color);
-        
-        // UI related
-        void UI_Text(const std::string& text, int textMultiplierFactor, const glm::vec2& pos, const glm::u8vec4& textColor);
+	class RenderManager
+	{
+		using ImGuiCallback = std::function<void()>;
+	public:
+		RenderManager(Window* window);
+		~RenderManager();
 
-    private:
-        RenderManager(const RenderManager& other) = delete;
-        RenderManager& operator=(RenderManager& other) = delete;
-    private:
-        Scope<Renderer> m_Renderer;
+		void OnUpdate(const Ref<EntityManager>& entityManager);
+		// For ImGui
+		void OnUpdate(const ImGuiCallback& callback);
 
-        CameraData m_Camera;
+		Renderer* GetRenderer() const;
 
-        friend class HierarchyPanel;
-    };
+		const CameraData& GetCamera() const;
+	private:
+		RenderManager(const RenderManager& other) = delete;
+		RenderManager& operator=(RenderManager& other) = delete;
+
+		void RenderImGui();
+	private:
+		Scope<Renderer> m_Renderer;
+
+		CameraData m_Camera;
+
+		ImGuiCallback m_ImGuiCallback;
+	};
 }

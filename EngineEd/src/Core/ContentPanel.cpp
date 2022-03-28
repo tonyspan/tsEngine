@@ -1,10 +1,12 @@
 #include "ContentPanel.h"
 
+#include "imgui.h"
+
 // BasePath for assets/content has trailing slash, parent_path() removes it
 const auto g_Path = tsEngine::AssetManager::s_BasePath.parent_path();
 
-// Not show the source code folder
-const auto g_Core = "Core";
+// Not to show the source code folder
+constexpr char* g_Core = "Core";
 const auto g_CorePathString = std::filesystem::path(g_Core).string();
 
 ContentPanel::ContentPanel()
@@ -15,7 +17,7 @@ ContentPanel::ContentPanel()
 void ContentPanel::OnImGuiRender()
 {
 	bool active = true;
-	const ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove /*| ImGuiWindowFlags_NoBackground*/ | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
+	const ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
 
 	static std::string currPathString = g_Path.string();
 	
@@ -25,7 +27,7 @@ void ContentPanel::OnImGuiRender()
 
 	std::string contentBrowser = "Content Browser";
 
-	ImGui::Begin(contentBrowser.c_str(), &active, winFlags);
+	ImGui::Begin(contentBrowser.c_str());
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
@@ -34,7 +36,14 @@ void ContentPanel::OnImGuiRender()
 	
 	ImGui::PushItemWidth(150.0f);
 	if (ImGui::InputTextWithHint("##search", "Search...", buffer, IM_ARRAYSIZE(buffer)))
+	{
 		toBeSearched = std::string(buffer);
+
+		ImGui::SameLine();
+		if (ImGui::SmallButton("X"))
+			toBeSearched.clear();
+
+	}
 	
 	ImGui::SameLine();
 	ImGui::PushItemWidth(500.0f);

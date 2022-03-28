@@ -6,97 +6,149 @@
 
 namespace Game
 {
-    bool PlayerController::s_StillPlaying = true;
-    int PlayerController::s_Score = 0;
+	void PlayerController::OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager)
+	{
+		m_Context = entityManager;
 
-    void PlayerController::OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, tsEngine::Texture* texture)
-    {
-        ASSERT(entityManager != nullptr, "Must pass valid pointer to entityManager to PlayerController::OnCreate()");
-        ASSERT(texture != nullptr, "Must pass valid pointer to texture to PlayerController::OnCreate()");
+		auto player = entityManager->CreateEntity("Player");
 
-        auto player = entityManager->CreateEntity();
+		entityManager->AddComponent<tsEngine::TransformComponent>(player, -400.0f, 0.0f, 70.0f, 70.0f);
+		entityManager->AddComponent<tsEngine::CollisionComponent>(player, 60.0f, 60.0f);
+		entityManager->AddComponent<PlayerComponent>(player, 50.0f, true);
+		entityManager->AddComponent<tsEngine::MoverComponent>(player);
+		entityManager->AddComponent<tsEngine::SpriteComponent>(player);
+		entityManager->AddComponent<HealthComponent>(player, 3);
 
-        entityManager->AddComponent<tsEngine::TransformComponent>(player, -400.0f, 0.0f, 70.0f, 70.0f);
-        entityManager->AddComponent<tsEngine::CollisionComponent>(player, 60.0f, 60.0f);
-        entityManager->AddComponent<PlayerComponent>(player, 50.0f);
-        entityManager->AddComponent<tsEngine::MoverComponent>(player);
-        entityManager->AddComponent<tsEngine::SpriteComponent>(player);
+		entityManager->GetComponent<tsEngine::SpriteComponent>(player).Image = tsEngine::AssetManager::GetTexture("bird");
 
-        entityManager->GetComponent<tsEngine::SpriteComponent>(player).Image = texture;
-    }
+		// UI related
+		{
+			auto ui = entityManager->CreateEntity("uiScore");
+			entityManager->AddComponent<tsEngine::TransformComponent>(ui);
+			entityManager->AddComponent<tsEngine::TextComponent>(ui);
 
-    void PlayerController::OnUpdate(float ts, const tsEngine::Ref<tsEngine::EntityManager>& entityManager)
-    {
-        auto view = entityManager->GetAllEntitiesWith<tsEngine::MoverComponent, PlayerComponent, tsEngine::TransformComponent, tsEngine::CollisionComponent>();
+			auto& t = entityManager->GetComponent<tsEngine::TextComponent>(ui);
+			t.Color = { 255, 0, 0, 0 };
+			t.Font = tsEngine::AssetManager::GetFont("font");
+			t.HasBorder = false;
+			t.MultiplierFactor = 4;
 
-        for (auto entity : view)
-        {
-            auto& move = view.get<tsEngine::MoverComponent>(entity);
-            auto speed = view.get<PlayerComponent>(entity).PanSpeed;
-            auto& pos = view.get<tsEngine::TransformComponent>(entity);
+			entityManager->GetComponent<tsEngine::TransformComponent>(ui).Position = { 0.0f, -300.0f };
 
-            if (tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::Space))
-            {
-                pos.Position.y -= speed;
-                move.TranslationSpeed.y = -10.0f * speed;
-            }
-            else
-            {
-                move.TranslationSpeed.y = 1.5f * speed;
-            }
+			ui = entityManager->CreateEntity("uiLives");
+			entityManager->AddComponent<tsEngine::TransformComponent>(ui);
+			entityManager->AddComponent<tsEngine::TextComponent>(ui);
 
-            auto collider = view.get<tsEngine::CollisionComponent>(entity);
+			auto& tt = entityManager->GetComponent<tsEngine::TextComponent>(ui);
+			tt.Color = { 255, 0, 0, 0 };
+			tt.Font = tsEngine::AssetManager::GetFont("font");
+			tt.HasBorder = false;
+			tt.MultiplierFactor = 2;
 
-            for (auto coliderEntity : collider.CollidedWith)
-            {
-                if (entityManager->HasComponent<WallComponent>(coliderEntity))
-                {
-                    auto& mover = view.get<tsEngine::MoverComponent>(entity);
-                    mover.TranslationSpeed = { 0, 0 };
-                    
-                    s_StillPlaying = false;
-                }
+			entityManager->GetComponent<tsEngine::TransformComponent>(ui).Position = { -550.0f, -320.0f };
+		}
 
-                if (entityManager->HasComponent<ObstacleComponent>(coliderEntity))
-                {
-                    auto& mover = view.get<tsEngine::MoverComponent>(entity);
-                    mover.TranslationSpeed = { 0, 0 };
+		m_Score = 0;
+	}
 
-                    s_StillPlaying = false;
-                }
+	void PlayerController::OnUpdate(float ts)
+	{
+		auto entityManager = m_Context;
 
-                if (entityManager->HasComponent<ScoreColliderComponent>(coliderEntity) && !entityManager->GetComponent<ScoreColliderComponent>(coliderEntity).Triggered)
-                {
-                    entityManager->GetComponent<ScoreColliderComponent>(coliderEntity).Triggered = true;
-                    s_Score += 1;
-                }
-            }
-        }
-    }
+		auto view = entityManager->GetAllEntitiesWith<PlayerComponent, tsEngine::TransformComponent, tsEngine::MoverComponent, tsEngine::CollisionComponent>();
 
-    const int PlayerController::GetPlayerScore() const
-    {
-        return s_Score;
-    }
+		auto player = entityManager->FindEntityByTag("Player");
+		auto& pc = entityManager->GetComponent<PlayerComponent>(player);
+		auto& health = entityManager->GetComponent<HealthComponent>(player);
 
-    void PlayerController::OnEvent(tsEngine::Event& event)
-    {
-        tsEngine::EventDispatcher dispatcher(&event);
+		for (auto entity : view)
+		{
+			auto& move = view.get<tsEngine::MoverComponent>(entity);
+			auto speed = view.get<PlayerComponent>(entity).PanSpeed;
+			auto& pos = view.get<tsEngine::TransformComponent>(entity);
 
-        dispatcher.Dispatch<tsEngine::KeyboardEvent>(ENGINE_BIND_FUNC(OnKeyPressedEvent));
-        dispatcher.Dispatch<tsEngine::MouseButtonEvent>(ENGINE_BIND_FUNC(OnMousePressedEvent));
-        dispatcher.Dispatch<tsEngine::MousePositionEvent>(ENGINE_BIND_FUNC(OnMouseMoveEvent));
-    }
+			if (tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::Space))
+			{
+				pos.Position.y -= speed;
+				move.TranslationSpeed.y = -10.0f * speed;
+			}
+			else
+			{
+				move.TranslationSpeed.y = 1.5f * speed;
+			}
 
-    void PlayerController::OnKeyPressedEvent(tsEngine::KeyboardEvent& event)
-    {
-    }
+			auto collider = view.get<tsEngine::CollisionComponent>(entity);
 
-    void PlayerController::OnMousePressedEvent(tsEngine::MouseButtonEvent& event)
-    {
-    }
+			for (auto coliderEntity : collider.CollidedWith)
+			{
+				if (entityManager->HasComponent<WallComponent>(coliderEntity))
+				{
+					auto& mover = view.get<tsEngine::MoverComponent>(entity);
+					mover.TranslationSpeed = { 0, 0 };
 
-    void PlayerController::OnMouseMoveEvent(tsEngine::MousePositionEvent& event)
-    {
-    }
+					pc.StillPlaying = false;
+				}
+
+				if (entityManager->HasComponent<ObstacleComponent>(coliderEntity))
+				{
+					auto& mover = view.get<tsEngine::MoverComponent>(entity);
+					mover.TranslationSpeed = { 0, 0 };
+
+					pc.StillPlaying = false;
+				}
+
+				if (entityManager->HasComponent<ScoreColliderComponent>(coliderEntity) && !entityManager->GetComponent<ScoreColliderComponent>(coliderEntity).Triggered)
+				{
+					entityManager->GetComponent<ScoreColliderComponent>(coliderEntity).Triggered = true;
+					m_Score++;
+				}
+			}
+		}
+
+		// UI related
+		{
+			auto uiScore = entityManager->FindEntityByTag("uiScore");
+			entityManager->GetComponent<tsEngine::TextComponent>(uiScore).Text = std::to_string(m_Score);
+
+			auto uiLives = entityManager->FindEntityByTag("uiLives");
+			entityManager->GetComponent<tsEngine::TextComponent>(uiLives).Text = "Lives: " + std::to_string(health.Lives);
+		}
+	}
+
+	void PlayerController::OnEvent(tsEngine::Event& event)
+	{
+		tsEngine::EventDispatcher dispatcher(&event);
+
+		dispatcher.Dispatch<tsEngine::KeyboardEvent>(ENGINE_BIND_FUNC(OnKeyPressedEvent));
+		dispatcher.Dispatch<tsEngine::MouseButtonEvent>(ENGINE_BIND_FUNC(OnMousePressedEvent));
+		dispatcher.Dispatch<tsEngine::MousePositionEvent>(ENGINE_BIND_FUNC(OnMouseMoveEvent));
+	}
+
+	void PlayerController::Reset()
+	{
+		auto player = m_Context->FindEntityByTag("Player");
+		auto oldHealth = m_Context->GetComponent<HealthComponent>(player);
+
+		m_Context->DestroyEntityByTag("Player");
+
+		m_Context->DestroyEntityByTag("uiScore");
+		m_Context->DestroyEntityByTag("uiLives");
+
+		OnCreate(m_Context);
+
+		player = m_Context->FindEntityByTag("Player");
+		m_Context->GetComponent<HealthComponent>(player) = oldHealth;
+	}
+
+	void PlayerController::OnKeyPressedEvent(tsEngine::KeyboardEvent& event)
+	{
+	}
+
+	void PlayerController::OnMousePressedEvent(tsEngine::MouseButtonEvent& event)
+	{
+	}
+
+	void PlayerController::OnMouseMoveEvent(tsEngine::MousePositionEvent& event)
+	{
+	}
 }

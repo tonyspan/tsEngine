@@ -2,25 +2,24 @@
 
 #include "ObstacleController.h"
 
-#include "PlayerController.h"
-
 #include "../Entities/Components.h"
 #include "../Entities/Constants.h"
 
 namespace Game
 {
-	void ObstacleController::OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, tsEngine::Texture* texture)
+	void ObstacleController::OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager)
 	{
-		ASSERT(entityManager != nullptr, "Must pass valid pointer to entityManager ObstacleController::OnCreate()");
-		ASSERT(texture != nullptr, "Must pass valid pointer to texture ObstacleController::OnCreate()");
+		m_Context = entityManager;
+		
+		auto texture = tsEngine::AssetManager::GetTexture("pipe");
 
-		float randomPosition = 0;
+		float randomPosition = 0.0f;
 
 		for (int i = 0; i < m_NumberOfObstacles - 1; i++)
 		{
 			randomPosition = tsEngine::Random::Ranged(150, 550);
 
-			auto lowerPipe = entityManager->CreateEntity();
+			auto lowerPipe = entityManager->CreateEntity("lowerPipe" + std::to_string(i));
 			entityManager->AddComponent<ObstacleComponent>(lowerPipe, 150.0f);
 			entityManager->AddComponent<tsEngine::TransformComponent>(lowerPipe, 500.0f * i, randomPosition, m_ObstacleWidth, m_ObstacleHeight);
 			entityManager->AddComponent<tsEngine::CollisionComponent>(lowerPipe, m_ObstacleWidth, m_ObstacleHeight);
@@ -29,7 +28,7 @@ namespace Game
 
 			entityManager->GetComponent<tsEngine::SpriteComponent>(lowerPipe).Image = texture;
 
-			auto upperPipe = entityManager->CreateEntity();
+			auto upperPipe = entityManager->CreateEntity("upperPipe" + std::to_string(i));
 			entityManager->AddComponent<ObstacleComponent>(upperPipe, 150.0f);
 			entityManager->AddComponent<tsEngine::TransformComponent>(upperPipe, 500.0f * i, randomPosition - Constants::HEIGHT, m_ObstacleWidth, m_ObstacleHeight);
 			entityManager->AddComponent<tsEngine::CollisionComponent>(upperPipe, m_ObstacleWidth, m_ObstacleHeight);
@@ -42,7 +41,7 @@ namespace Game
 
 		for (int i = 0; i < m_NumberOfObstacles - 1; i++)
 		{
-			auto scoreColider = entityManager->CreateEntity();
+			auto scoreColider = entityManager->CreateEntity("scoreCollider" + std::to_string(i));
 
 			entityManager->AddComponent<ScoreColliderComponent>(scoreColider);
 			entityManager->AddComponent<tsEngine::TransformComponent>(scoreColider, 500.0f * i, 0.0f, 0.0f, Constants::HEIGHT);
@@ -54,8 +53,10 @@ namespace Game
 		}
 	}
 
-	void ObstacleController::OnUpdate(float ts, const tsEngine::Ref<tsEngine::EntityManager>& entityManager)
-	{	
+	void ObstacleController::OnUpdate(float ts)
+	{
+		auto entityManager = m_Context;
+
 		float randomPosition = 0.0f;
 
 		auto view = entityManager->GetAllEntitiesWith<ObstacleComponent, tsEngine::MoverComponent, tsEngine::TransformComponent>();
@@ -65,14 +66,7 @@ namespace Game
 			auto& move = view.get<tsEngine::MoverComponent>(obstacle);
 			auto speed = view.get<ObstacleComponent>(obstacle).Speed;
 
-			if (!Game::PlayerController::s_StillPlaying)
-			{
-				move.TranslationSpeed.x = 0.0f;
-			}
-			else
-			{
-				move.TranslationSpeed.x = -1.0f * speed;
-			}
+			move.TranslationSpeed.x = -1.0f * speed;
 
 			auto& transform = view.get<tsEngine::TransformComponent>(obstacle);
 
@@ -100,14 +94,7 @@ namespace Game
 			auto& move = view2.get<tsEngine::MoverComponent>(colider);
 			auto speed = view2.get<ScoreColliderComponent>(colider).Speed;
 			
-			if (!Game::PlayerController::s_StillPlaying)
-			{
-				move.TranslationSpeed.x = 0.0f;
-			}
-			else
-			{
-				move.TranslationSpeed.x = -1.0f * speed;
-			}
+			move.TranslationSpeed.x = -1.0f * speed;
 
 			auto& transform = view2.get<tsEngine::TransformComponent>(colider);
 
@@ -117,5 +104,17 @@ namespace Game
 				view2.get<ScoreColliderComponent>(colider).Triggered = false;
 			}
 		}
+	}
+
+	void ObstacleController::Reset()
+	{
+		for (int i = 0; i < m_NumberOfObstacles - 1; i++)
+		{
+			m_Context->DestroyEntityByTag("lowerPipe" + std::to_string(i));
+			m_Context->DestroyEntityByTag("upperPipe" + std::to_string(i));
+			m_Context->DestroyEntityByTag("scoreCollider" + std::to_string(i));
+		}
+
+		OnCreate(m_Context);
 	}
 }

@@ -23,13 +23,13 @@ private:
 	template<typename T>
 	bool CheckEntityIfHoveredWith(const tsEngine::CameraData& camera, const glm::vec2& mousePos)
 	{
-		auto view = m_Context->GetAllEntitiesWith<tsEngine::TransformComponent, T>();
+		auto view = m_EntityContext->GetAllEntitiesWith<tsEngine::TransformComponent, T>();
 
 		for (auto entity : view)
 		{
 			auto& transform = view.get<tsEngine::TransformComponent>(entity);
 
-			if (IsEntityHovered(transform, camera, m_MousePos))
+			if (IsEntityHovered(transform, camera, mousePos))
 			{
 				m_HoveredEntity = entity;
 				return true;
@@ -41,7 +41,7 @@ private:
 
 	bool IsEntityHovered(const tsEngine::TransformComponent& transform, const tsEngine::CameraData& camera, const glm::vec2& mousePos);
 
-	void CalcViewport();
+	void UpdateViewport();
 
 	void New();
 	void Save();
@@ -51,8 +51,8 @@ private:
 
 	entt::entity m_HoveredEntity;
 
-	tsEngine::Ref<tsEngine::EntityManager> m_Context;
-	tsEngine::Ref<tsEngine::RenderManager> m_Context2;
+	tsEngine::Ref<tsEngine::EntityManager> m_EntityContext;
+	tsEngine::Ref<tsEngine::RenderManager> m_RenderContext;
 
 	// For when creating blank workspace (i.e when loading save file)
 	tsEngine::Ref<tsEngine::EntityManager> m_EmptyEntityManager;
@@ -61,11 +61,11 @@ private:
 	glm::vec2 m_MousePos;
 	glm::vec2 m_ClickOffset;
 
-	SDL_Rect m_Viewport;
+	glm::vec4 m_Viewport;
 
 	// Panels
 	HierarchyPanel m_HierarchyPanel;
-	ContentPanel m_AssetPanel;
+	ContentPanel m_ContentPanel;
 
-	std::string m_EditorLoadPath;
+	std::filesystem::path m_EditorLoadPath;
 };

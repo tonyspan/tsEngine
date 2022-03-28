@@ -2,16 +2,33 @@ Workspace: Untitled
 Entities:
   - Entity: 3
     TagComponent:
-      Tag: text
+      Tag: EditorCamera
     TransformComponent:
-      Position: [-121, -183]
-      Size: [550, 120]
+      Position: [0, 0]
+      Size: [1906, 985]
       Rotation: 0
-    TextComponent:
-      Text: Hello There
-      MultiplierFactor: 10
-      Color: [0.396078438, 0.396078438, 0.396078438, 0]
+    CameraComponent:
+      PanSpeed: 100
   - Entity: 2
+    TagComponent:
+      Tag: box
+    TransformComponent:
+      Position: [-337, 67]
+      Size: [100, 100]
+      Rotation: 0
+    SpriteComponent:
+      Color: [0.772549033, 0.611764729, 0.611764729, 0]
+      Image: ~
+      FlipHorizontal: false
+      FlipVertical: false
+      DrawPhysicsCollider: false
+      Animation: false
+      AnimationFrames: 1
+      AnimationCurrentFrame: 0
+      Width: 1
+      Height: 1
+      DelayPerFrame: 150
+  - Entity: 1048577
     TagComponent:
       Tag: circle
     TransformComponent:
@@ -24,22 +41,18 @@ Entities:
     CollisionComponent:
       Shape: AABox
       Size: [100, 100]
-  - Entity: 1
+  - Entity: 2097152
     TagComponent:
-      Tag: box
+      Tag: text
     TransformComponent:
-      Position: [-337, 67]
-      Size: [100, 100]
-      Rotation: 0
-    SpriteComponent:
-      Color: [0.772549033, 0.611764729, 0.611764729, 0]
-      DrawPhysicsCollider: false
-  - Entity: 1048576
-    TagComponent:
-      Tag: MainCamera
-    TransformComponent:
-      Position: [0, 0]
-      Size: [1170, 580]
-      Rotation: 0
-    CameraComponent:
-      PanSpeed: 100
+      Position: [-121, -183]
+      Size: [540, 120]
+      Rotation: 5
+    TextComponent:
+      Font: Assets\default.ttf
+      FontSize: 10
+      Text: Hello There
+      MultiplierFactor: 10
+      WrapWidth: 0
+      Border: false
+      Color: [0.396078438, 0.396078438, 0.396078438, 0]

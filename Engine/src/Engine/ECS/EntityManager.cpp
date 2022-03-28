@@ -22,22 +22,48 @@ namespace tsEngine
 		m_Registry.destroy(entity);
 	}
 
-	void EntityManager::ClearRegistry(entt::registry& registry)
+	void EntityManager::DestroyEntityByTag(const std::string& tag)
 	{
-		registry.clear();
+		auto e = FindEntityByTag(tag);
+
+		if (e != entt::null)
+			DestroyEntity(e);
 	}
 
-	void EntityManager::CopyRegistryAndComponents(entt::registry& dst, entt::registry& src)
+	entt::entity EntityManager::FindEntityByTag(const std::string& tag)
 	{
-		dst.assign(src.data(), src.data() + src.size(), src.destroyed());
+		auto view = GetAllEntitiesWith<TagComponent>();
 
-		CopyComponent<TagComponent>(dst, src);
-		CopyComponent<TransformComponent>(dst, src);
-		CopyComponent<MoverComponent>(dst, src);
-		CopyComponent<SpriteComponent>(dst, src);
-		CopyComponent<CircleComponent>(dst, src);
-		CopyComponent<CameraComponent>(dst, src);
-		CopyComponent<CollisionComponent>(dst, src);
-		CopyComponent<TextComponent>(dst, src);
+		for (const auto entity : view)
+		{
+			if (view.get<TagComponent>(entity).Tag == tag)
+				return entity;
+		}
+
+		ASSERT(false, "Can not find entity by Tag: {}", tag);
+
+		return entt::null;
+	}
+
+	void EntityManager::Clear()
+	{
+		m_Registry.clear();
+	}
+
+	void EntityManager::CopyRegistryAndComponents(Ref<EntityManager>& other)
+	{
+		m_Registry.clear();
+
+		auto& src = other->m_Registry;
+		m_Registry.assign(src.data(), src.data() + src.size(), src.destroyed());
+
+		CopyComponent<TagComponent>(m_Registry, src);
+		CopyComponent<TransformComponent>(m_Registry, src);
+		CopyComponent<MoverComponent>(m_Registry, src);
+		CopyComponent<SpriteComponent>(m_Registry, src);
+		CopyComponent<CircleComponent>(m_Registry, src);
+		CopyComponent<CameraComponent>(m_Registry, src);
+		CopyComponent<CollisionComponent>(m_Registry, src);
+		CopyComponent<TextComponent>(m_Registry, src);
 	}
 }

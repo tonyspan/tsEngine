@@ -3,7 +3,6 @@
 #include "pch.h"
 
 #include "Engine/Core/Base.h"
-//#include "Engine/ECS/ScriptableEntity.h"
 
 #include "entt.hpp"
 
@@ -12,6 +11,7 @@
 namespace tsEngine
 {
     struct Texture;
+    struct Font;
 
     struct TagComponent
     {
@@ -58,7 +58,7 @@ namespace tsEngine
         // u8vec4 compatible with SDL_Color
         glm::u8vec4 Color = { 255, 255, 255, 0 };
 
-        Texture* Image{};
+        Ref<Texture> Image = nullptr;
         bool FlipHorizontal = false;
         bool FlipVertical = false;
 
@@ -67,6 +67,7 @@ namespace tsEngine
         bool Animation = false;
         int AnimationFrames = 1;
         int AnimationCurrentFrame = 0;
+        int Width = 1;
         int Height = 1;
         int DelayPerFrame = 150;
     };
@@ -109,20 +110,23 @@ namespace tsEngine
 
     struct TextComponent
     {
-        std::string Text;
+        Ref<Font> Font = nullptr;
+        std::string Text = std::string();
         int MultiplierFactor = 4;
+        int WrapWidth = 0;
+        bool HasBorder = false;
         
         // u8vec4 compatible with SDL_Color
         glm::u8vec4 Color = { 255, 255, 255, 0 };
 
-        TextComponent(const std::string& text = "Enter Text")
-            : Text(text) {}
+        //TextComponent(const std::string& text = "Enter Text")
+        //    : Text(text) {}
     };
 
     class ScriptableEntity;
     struct NativeScriptComponent
     {
-        Ref<ScriptableEntity> Instance;
+        Ref<ScriptableEntity> Instance = nullptr;
 
         Ref<ScriptableEntity>(*InstantiateScript)();
         void (*DestroyScript)(NativeScriptComponent*);
@@ -131,7 +135,7 @@ namespace tsEngine
         void Bind()
         {
             InstantiateScript = []() { return std::dynamic_pointer_cast<ScriptableEntity>(CreateRef<T>()); };
-            DestroyScript = [](NativeScriptComponent* nsc) { nsc->Instance.reset(); };
+            DestroyScript = [](NativeScriptComponent* nsc) { nsc->Instance = nullptr; };
         }
     };
 }

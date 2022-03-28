@@ -1,219 +1,303 @@
 #include "Editor.h"
 
+#include "imgui.h"
+
 void Editor::OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, const tsEngine::Ref<tsEngine::RenderManager>& renderManager)
 {
-    ASSERT(entityManager != nullptr, "Must pass valid pointer to entityManager to Editor::OnCreate");
-    ASSERT(renderManager != nullptr, "Must pass valid pointer to entityManager to Editor::OnCreate");
+	SetContext(entityManager, renderManager);
+	m_HierarchyPanel.SetContext(m_EntityContext, m_RenderContext);
 
-    m_EditorCamera = entityManager->CreateEntity("MainCamera");
-    entityManager->AddComponent<tsEngine::TransformComponent>(m_EditorCamera);
-    entityManager->AddComponent<tsEngine::CameraComponent>(m_EditorCamera, 100.0f);
+	m_EditorCamera = entityManager->CreateEntity("EditorCamera");
+	entityManager->AddComponent<tsEngine::TransformComponent>(m_EditorCamera);
+	entityManager->AddComponent<tsEngine::CameraComponent>(m_EditorCamera, 100.0f);
 
-    SetContext(entityManager, renderManager);
-    m_HierarchyPanel.SetContext(entityManager, renderManager);
-
-    // Save the default/blank workspace to be loaded when a new one is created
-    m_EmptyEntityManager = tsEngine::CreateRef<tsEngine::EntityManager>();
-    tsEngine::EntityManager::CopyRegistryAndComponents(m_EmptyEntityManager->GetRegistry(), m_Context->GetRegistry());
+	m_EmptyEntityManager = tsEngine::CreateRef<tsEngine::EntityManager>();
+	m_EmptyEntityManager->CopyRegistryAndComponents(m_EntityContext);
 }
 
 void Editor::SetContext(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, const tsEngine::Ref<tsEngine::RenderManager>& renderManager)
 {
-    m_Context = entityManager;
-    m_Context2 = renderManager;
+	m_EntityContext = entityManager;
+	m_RenderContext = renderManager;
 }
 
 void Editor::OnUpdate()
 {
-    CalcViewport();
+	UpdateViewport();
+
+	auto e = m_HierarchyPanel.GetSelectedEntity();
+
+	// Position
+	{
+		if (tsEngine::Input::MouseButtonDown() && e != entt::null)
+			m_EntityContext->GetComponent<tsEngine::TransformComponent>(e).Position = m_MousePos - m_ClickOffset;
+	}
+
+	// Size
+	{
+		bool control = tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::LeftCtrl) || tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::RightCtrl);
+
+		auto wheelDir = tsEngine::Input::MouseWheelDirection();
+
+		if (control && e != entt::null)
+		{
+			const auto offset = 10.0f;
+			auto& size = m_EntityContext->GetComponent<tsEngine::TransformComponent>(e).Size;
+
+			if (wheelDir == 1)
+				size += offset;
+			else if (wheelDir == -1)
+				size -= offset;
+
+			tsEngine::Input::ResetWheel();
+		}
+	}
 }
 
-// NOTE: Hardcoded viewport
-void Editor::CalcViewport()
+void Editor::UpdateViewport()
 {
-    m_Viewport = { 420, 15, 1170, 580 };
-    m_Context2->GetRenderer()->SetViewport(m_Viewport);
+	m_RenderContext->GetRenderer()->SetViewport(m_Viewport);
 
-    auto view = m_Context->GetAllEntitiesWith<tsEngine::TagComponent, tsEngine::CameraComponent, tsEngine::TransformComponent>();
-
-    for (auto entity : view)
-    {
-        view.get<tsEngine::TransformComponent>(entity).Size = { m_Viewport.w, m_Viewport.h };
-    }
+	auto view = m_EntityContext->GetAllEntitiesWith<tsEngine::TagComponent, tsEngine::CameraComponent, tsEngine::TransformComponent>();
+	for (auto entity : view)
+	{
+		auto& tc = view.get<tsEngine::TransformComponent>(entity);
+		
+		//tc.Position = { m_Viewport.x, m_Viewport.y };
+		tc.Size = { m_Viewport.z, m_Viewport.w };
+	}
 }
 
 void Editor::New()
 {
-    tsEngine::EntityManager::ClearRegistry(m_Context->GetRegistry());
-    tsEngine::EntityManager::CopyRegistryAndComponents(m_Context->GetRegistry(), m_EmptyEntityManager->GetRegistry());
+	m_EntityContext->Clear();
+	m_EntityContext->CopyRegistryAndComponents(m_EmptyEntityManager);
 
-    m_HierarchyPanel.SetContext(m_Context, m_Context2);
-    m_HoveredEntity = entt::null;
+	m_HierarchyPanel.SetContext(m_EntityContext, m_RenderContext);
+	m_HoveredEntity = entt::null;
 }
 
 void Editor::Save()
-{    
-    if (!m_EditorLoadPath.empty())
-    {
-        tsEngine::Serializer serializer(m_Context);
-        serializer.Serialize(m_EditorLoadPath);
-        //m_EditorLoadPath = filepath;
-    }
+{
+	if (m_EditorLoadPath.empty())
+	{
+		m_EditorLoadPath = tsEngine::FileDialogs::SaveFileDialog("", tsEngine::AssetManager::s_AssetPath.string(), "*.tse\0");
+	}
+
+	if (!m_EditorLoadPath.empty())
+	{
+		tsEngine::Serializer serializer(m_EntityContext);
+		serializer.Serialize(m_EditorLoadPath.string());
+	}
+
 }
 
 void Editor::Load()
-{   
-    tsEngine::EntityManager::ClearRegistry(m_Context->GetRegistry());
-    
-    tsEngine::Serializer serializer(m_Context);
+{
+	if (m_EditorLoadPath.empty())
+	{
+		auto path = tsEngine::FileDialogs::OpenFileDialog("", tsEngine::AssetManager::s_AssetPath.string(), "*.tse\0");
+		if (!path.empty())
+			m_EditorLoadPath = path;
+	}
+	
+	if(!m_EditorLoadPath.empty())
+	{
+		if (m_EditorLoadPath.extension().string() != ".tse")
+		{
+			LOG_WARN("Could not load {} - not a workspace file", m_EditorLoadPath.string());
+			return;
+		}
 
-    // NOTE: Temporary
-    if(m_HierarchyPanel.GetFileToBeDeserialized().empty())
-        m_EditorLoadPath = tsEngine::AssetManager::s_AssetPath.string() + "entities.tse";
-    
-    if (serializer.Deserialize(m_EditorLoadPath))
-    {
-        m_HierarchyPanel.SetContext(m_Context, m_Context2);
-        m_HoveredEntity = entt::null;
-    }
+		m_EntityContext->Clear();
+		tsEngine::Serializer serializer(m_EntityContext);
+
+		if (serializer.Deserialize(m_EditorLoadPath.string()))
+		{
+			m_HierarchyPanel.SetContext(m_EntityContext, m_RenderContext);
+			m_HoveredEntity = entt::null;
+		}
+	}
+
+	m_EditorLoadPath.clear();
 }
 
 void Editor::OnImGuiRender()
 {
-    bool active = false;
+	ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->Pos);
+	ImGui::SetNextWindowSize(viewport->Size);
+	ImGui::SetNextWindowViewport(viewport->ID);
 
-    const ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_MenuBar;
+	ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_PassthruCentralNode);
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("New...", "Ctrl+N"))
+				New();
+			if (ImGui::MenuItem("Load...", "Ctrl+O"))
+				Load();
+			if (ImGui::MenuItem("Save...", "Ctrl+S"))
+				Save();
+			if (ImGui::MenuItem("Quit"))
+				tsEngine::Application::Get().Close();
 
-    ImGui::Begin("Main", &active, winFlags);
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem("New...", "Ctrl+N"))
-                New();
-            if (ImGui::MenuItem("Load...", "Ctrl+O"))
-                Load();
-            if (ImGui::MenuItem("Save...", "Ctrl+S"))
-                Save();
-            if (ImGui::MenuItem("Quit"))
-                tsEngine::Application::Get().Close();
-            ImGui::EndMenu();
-        }
+			ImGui::EndMenu();
+		}
 
-        ImGui::Text("FPS: %.2f", tsEngine::Application::Get().GetStats().FPS);
-        ImGui::Text("Hovered Entity: %s", m_HoveredEntity != entt::null ? m_Context->GetComponent<tsEngine::TagComponent>(m_HoveredEntity).Tag.c_str() : "-");
+		ImGui::EndMainMenuBar();
 
-        ImGui::EndMenuBar();
-    }
+		ImGuiWindowFlags windowFlags = 0;
+		windowFlags |= ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+					ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar;
+		bool open = true;
+		
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+		ImGui::Begin("Viewport", &open, windowFlags);
 
-    // NOTE: Is it the right place for this?
-    if (!m_HierarchyPanel.GetFileToBeDeserialized().empty())
-    {
-        m_EditorLoadPath = m_HierarchyPanel.GetFileToBeDeserialized().string();
-        Load();
-        m_HierarchyPanel.GetFileToBeDeserialized().clear();
-    }
+		auto m_ViewportFocused = ImGui::IsWindowFocused();
+		auto m_ViewportHovered = ImGui::IsWindowHovered();
+		tsEngine::Application::Get().GetImGui()->BypassImGuiHandleEvents(m_ViewportFocused && m_ViewportHovered);
 
-    m_HierarchyPanel.OnImGuiRender();
-    m_AssetPanel.OnImGuiRender();
+		auto viewportSize = ImGui::GetContentRegionAvail();
 
-    ImGui::End();
+		ImVec2 vMin = ImGui::GetWindowContentRegionMin();
+		vMin.x += ImGui::GetWindowPos().x;
+		vMin.y += ImGui::GetWindowPos().y;
+
+		const auto& imGuiTex = m_RenderContext->GetRenderer()->GetImGuiTexture();
+		auto imGuiTexSize = imGuiTex->Size();
+		ImGui::Image((ImTextureID)(intptr_t)imGuiTex->Raw(), { imGuiTexSize.x, imGuiTexSize.y });
+
+		m_Viewport = { vMin.x, vMin.y, viewportSize.x, viewportSize.y };
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+			{
+				const wchar_t* path = (const wchar_t*)payload->Data;
+				m_EditorLoadPath = std::filesystem::path(tsEngine::AssetManager::s_BasePath) / path;
+
+				Load();
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::PopStyleVar();
+		ImGui::End();
+
+		ImGui::Begin("Info");
+
+		std::string name = "None";
+		if (m_HoveredEntity != entt::null)
+			name = m_EntityContext->GetComponent<tsEngine::TagComponent>(m_HoveredEntity).Tag;
+		ImGui::Text("Hovered Entity: %s", name.c_str());
+
+		const auto& appStats = tsEngine::Application::Get().GetStats();
+		ImGui::TextWrapped("App Info:\nFPS: %.2f\nTimestep: %f", appStats.FPS, appStats.Timestep);
+		const auto& renderStats = m_RenderContext->GetRenderer()->GetStats();
+		ImGui::TextWrapped("Renderer Info:\nName: %s\nRendered Entities: %d", renderStats.RendererInfo->name, renderStats.RenderedEntities);
+		ImGui::TextWrapped("How to use:\n- Load a file (*.tse) fast by dragging it from Content Browser to the Viewport.\n- Right click on Scene Hierarchy to create a new entity.\n- Click on Viewport to gain focus, select an entity and drag it around.");
+		ImGui::TextWrapped("Shortcuts:\nCtrl+N: New workspace\nCtrl+O: Open file\nCtrl+S: Save current workspace\nCtrl+WheelUp/Down: Change the size of selected entity");
+
+		ImGui::End();
+	}
+
+	m_HierarchyPanel.OnImGuiRender();
+	m_ContentPanel.OnImGuiRender();
 }
 
 void Editor::OnEvent(tsEngine::Event& event)
 {
-    tsEngine::EventDispatcher dispatcher(&event);
+	tsEngine::EventDispatcher dispatcher(&event);
 
-    dispatcher.Dispatch<tsEngine::KeyboardEvent>(ENGINE_BIND_FUNC(OnKeyPressedEvent));
-    dispatcher.Dispatch<tsEngine::MouseButtonEvent>(ENGINE_BIND_FUNC(OnMousePressedEvent));
-    dispatcher.Dispatch<tsEngine::MousePositionEvent>(ENGINE_BIND_FUNC(OnMouseMoveEvent));
+	dispatcher.Dispatch<tsEngine::KeyboardEvent>(ENGINE_BIND_FUNC(OnKeyPressedEvent));
+	dispatcher.Dispatch<tsEngine::MouseButtonEvent>(ENGINE_BIND_FUNC(OnMousePressedEvent));
+	dispatcher.Dispatch<tsEngine::MousePositionEvent>(ENGINE_BIND_FUNC(OnMouseMoveEvent));
 }
 
 void Editor::OnKeyPressedEvent(tsEngine::KeyboardEvent& event)
 {
-    // Shortcuts
-    if (event.Repeat > 0)
-        return;
+	// Shortcuts
+	if (event.Repeat > 0)
+		return;
 
-    bool control = tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::LeftCtrl) || tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::RightCtrl);
+	bool control = tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::LeftCtrl) || tsEngine::Input::IsKeyPressed(tsEngine::KeyCode::RightCtrl);
 
-    switch (event.Scancode)
-    {
-        case tsEngine::KeyCode::N:
-        {
-            if (control)
-                New();
-        
-            break;
-        }
-        case tsEngine::KeyCode::O:
-        {
-            if (control)
-                Load();
+	switch (event.Scancode)
+	{
+		case tsEngine::KeyCode::N:
+		{
+			if (control)
+				New();
 
-            break;
-        }
-        case tsEngine::KeyCode::S:
-        {
-            if (control)
-                Save();
+			break;
+		}
+		case tsEngine::KeyCode::O:
+		{
+			if (control)
+				Load();
 
-            break;
-        }
-    }
+			break;
+		}
+		case tsEngine::KeyCode::S:
+		{
+			if (control)
+				Save();
+
+			break;
+		}
+	}
 }
 
 void Editor::OnMousePressedEvent(tsEngine::MouseButtonEvent& event)
 {
-    if (event.Down)
-    {
-        if (event.ButtonId == tsEngine::MouseButtonId::LMB)
-            m_HierarchyPanel.SetSelectedEntity(m_HoveredEntity);
-    }
+	if (event.Down)
+	{
+		if (event.ButtonId == tsEngine::MouseCode::LMB)
+			m_HierarchyPanel.SetSelectedEntity(m_HoveredEntity);
+	}
 }
 
 void Editor::OnMouseMoveEvent(tsEngine::MousePositionEvent& event)
 {
-    const auto& camera = m_Context2->GetCamera();
+	const auto& camera = m_RenderContext->GetCamera();
 
-    m_MousePos = tsEngine::Input::MousePosition();
+	m_MousePos = tsEngine::Input::MousePosition();
 
-    auto spriteEntitytHovered = CheckEntityIfHoveredWith<tsEngine::SpriteComponent>(camera, m_MousePos);
+	auto spriteEntitytHovered = CheckEntityIfHoveredWith<tsEngine::SpriteComponent>(camera, m_MousePos);
 
-    if (spriteEntitytHovered)
-        return;
+	if (spriteEntitytHovered)
+		return;
 
-    auto circleEntitytHovered = CheckEntityIfHoveredWith<tsEngine::CircleComponent>(camera, m_MousePos);
+	auto circleEntitytHovered = CheckEntityIfHoveredWith<tsEngine::CircleComponent>(camera, m_MousePos);
 
-    if (circleEntitytHovered)
-        return;
+	if (circleEntitytHovered)
+		return;
 
-    auto textEntitytHovered = CheckEntityIfHoveredWith<tsEngine::TextComponent>(camera, m_MousePos);
+	auto textEntitytHovered = CheckEntityIfHoveredWith<tsEngine::TextComponent>(camera, m_MousePos);
 
-    if (textEntitytHovered)
-        return;
+	if (textEntitytHovered)
+		return;
 
-    m_HoveredEntity = entt::null;
-
-    if (tsEngine::Input::MouseButtonDown())
-        m_Context->GetComponent<tsEngine::TransformComponent>(m_HierarchyPanel.GetSelectedEntity()).Position = m_MousePos - m_ClickOffset;
-
+	m_HoveredEntity = entt::null;
 }
 
 bool Editor::IsEntityHovered(const tsEngine::TransformComponent& transform, const tsEngine::CameraData& camera, const glm::vec2& mousePos)
 {
-    auto screenPosition = tsEngine::Renderer::GetScreenPosition(transform.Position, camera);
+	auto screenPosition = tsEngine::Renderer::GetScreenPosition(transform.Position, camera);
 
-    SDL_Rect dst = { (int)(screenPosition.x - transform.Size.x / 2), (int)(screenPosition.y - transform.Size.y / 2), (int)transform.Size.x, (int)transform.Size.y };
+	SDL_Rect dst = { (int)(screenPosition.x - transform.Size.x / 2), (int)(screenPosition.y - transform.Size.y / 2), (int)transform.Size.x, (int)transform.Size.y };
 
-    SDL_Point point = { (int)mousePos.x, (int)mousePos.y };
+	SDL_Point point = { (int)mousePos.x, (int)mousePos.y };
 
-    if (SDL_PointInRect(&point, &dst))
-    {
-        m_ClickOffset = mousePos - transform.Position;
+	if (SDL_PointInRect(&point, &dst))
+	{
+		m_ClickOffset = mousePos - transform.Position;
 
-        return true;
-    }
+		return true;
+	}
 
-    return false;
+	return false;
 }

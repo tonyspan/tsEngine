@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Engine/Core/Application.h>
+#include <Engine.h>
+#include <Engine/Core/EntryPoint.h>
 
 class Sandbox : public tsEngine::Application
 {
@@ -13,13 +14,4 @@ protected:
     void ClientDefOnUpdate(float ts) override;
     bool ClientDefShutdown() override;
     void ClientDefOnEvent(tsEngine::Event& event) override;
-private:
-    void OnKeyPressedEvent(tsEngine::KeyboardEvent& event);
-    void OnMousePressedEvent(tsEngine::MouseButtonEvent& event);
-    void OnMouseMoveEvent(tsEngine::MousePositionEvent& event);
 };
-
-tsEngine::Application* tsEngine::CreateApplication()
-{
-    return new Sandbox();
-}

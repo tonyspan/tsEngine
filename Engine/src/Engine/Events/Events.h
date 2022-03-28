@@ -3,7 +3,7 @@
 #include "pch.h"
 #include "Engine/Log/Log.h"
 
-#include <SDL.h>
+//#include <SDL.h>
 
 namespace tsEngine
 {
@@ -13,7 +13,7 @@ namespace tsEngine
 		Event(const std::string& name)
 			: Active(true), Name(name)
 		{
-			SDL_EventState(SDL_SYSWMEVENT, SDL_IGNORE);
+			//SDL_EventState(SDL_SYSWMEVENT, SDL_IGNORE);
 		}
 
 		virtual ~Event() = default;

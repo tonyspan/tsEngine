@@ -16,8 +16,6 @@ public:
 
 	void SetSelectedEntity(entt::entity entity);
 	entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
-
-	std::filesystem::path& GetFileToBeDeserialized() { return m_FileToBeDeserialized; }
 private:
 	void DrawEntityNode(entt::entity entity);
 	void DrawComponents(entt::entity entity);
@@ -27,7 +25,5 @@ private:
 private:
 	tsEngine::Ref<tsEngine::EntityManager> m_Context;
 	tsEngine::Ref<tsEngine::RenderManager> m_Context2;
-	entt::entity m_SelectedEntity;
-
-	std::filesystem::path m_FileToBeDeserialized;
+	entt::entity m_SelectedEntity = entt::null;
 };

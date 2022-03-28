@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Engine/Core/Application.h>
+#include <Engine.h>
+#include <Engine/Core/EntryPoint.h>
 
 #include "Editor.h"
 
@@ -23,8 +24,3 @@ private:
 private:
     Editor m_Editor;
 };
-
-tsEngine::Application* tsEngine::CreateApplication()
-{
-    return new EditorApp();
-}

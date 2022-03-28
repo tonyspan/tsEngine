@@ -2,18 +2,11 @@
 
 #include "Engine/Core/Base.h"
 
-#include "Engine/ECS/Components.h"
+#include "entt.hpp"
 
 namespace tsEngine
 {
     class EntityManager;
-
-    struct EntityData
-    {
-        TransformComponent* tc = nullptr;
-        CollisionComponent* cc = nullptr;
-        MoverComponent* mc = nullptr;
-    };
 
     class PhysicsManager
     {
@@ -23,7 +16,7 @@ namespace tsEngine
 
         void OnUpdate(float ts, const Ref<EntityManager>& entityManager);
     private:
-        bool CheckForCollision(const EntityData& entity1, const EntityData& entity2);
-        bool CheckForAABoxAndCircle(const EntityData& entity1, const EntityData& entity2);
+        bool CheckForCollision(const Ref<EntityManager>& entityManager, const entt::entity entity1, const entt::entity entity2);
+        bool CheckForAABoxAndCircle(const Ref<EntityManager>& entityManager, const entt::entity aabox, const entt::entity circle);
     };
 }

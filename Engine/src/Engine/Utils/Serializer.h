@@ -2,12 +2,13 @@
 
 #include "Engine/Core/Base.h"
 
-#include "Engine/ECS/EntityManager.h"
+#include "entt.hpp"
 
 #include <yaml-cpp/yaml.h>
 
 namespace tsEngine
 {
+	class EntityManager;
 
 	class Serializer
 	{

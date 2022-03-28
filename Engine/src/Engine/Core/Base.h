@@ -2,12 +2,15 @@
 
 #include "pch.h"
 
+#include "PlatformDetection.h"
+
 namespace tsEngine
 {
 	template<typename T>
 	using Scope = std::unique_ptr<T>;
 
 	// Custom deleter for unique_ptr
+	// Unused
 	template<auto FUNC, typename T>
 	struct Deleter
 	{
@@ -17,8 +20,15 @@ namespace tsEngine
 		}
 	};
 
-	template<typename T, auto FUNC>
-	using Scope2 = std::unique_ptr<T, Deleter<FUNC, T>>;
+	// Custom deleter for unique_ptr
+	template<typename T>
+	struct Deleter2
+	{
+		void operator()(T* ptr);
+	};
+
+	template<typename T>
+	using Scope2 = std::unique_ptr<T, Deleter2<T>>;
 	
 	template<typename T, typename ... Args>
 	constexpr Scope<T> CreateScope(Args&& ... args)

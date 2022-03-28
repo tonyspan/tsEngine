@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Engine/Core/Application.h>
+#include <Engine.h>
+#include <Engine/Core/EntryPoint.h>
 
 #include "../AngryBird/Entities/Constants.h"
 #include "../AngryBird/Entities/CameraController.h"
@@ -33,8 +34,3 @@ private:
     Game::MainMenu m_MainMenu;
     Game::EndMenu m_EndMenu;
 };
-
-tsEngine::Application* tsEngine::CreateApplication()
-{
-    return new Sandbox();
-}

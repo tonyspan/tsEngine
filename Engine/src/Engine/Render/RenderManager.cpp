@@ -2,77 +2,87 @@
 
 #include "RenderManager.h"
 
+#include "Renderer.h"
+#include "Camera.h"
+
 #include "Engine/Log/Log.h"
+
+#include "Engine/ECS/EntityManager.h"
+#include "Engine/ECS/Components.h"
+
+#include "Engine/Window/Window.h"
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
 namespace tsEngine
 {
-    RenderManager::RenderManager(const WindowProps& props)
-    {
-        LOG_INFO("Initializing RendererManager");
-        
-        if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-            LOG_CRITICAL("Unable to initialize SDL. SDL error: {0}", SDL_GetError());
+	RenderManager::RenderManager(Window* window)
+	{
+		LOG_INFO("Initializing RendererManager");
 
-        if (IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG) < 0)
-            LOG_CRITICAL("Unable to initialize SDL_Image");
+		if (SDL_Init(SDL_INIT_VIDEO) < 0)
+			LOG_CRITICAL("Unable to initialize SDL. SDL error: {0}", SDL_GetError());
 
-        if (TTF_Init() == -1)
-            LOG_CRITICAL("SDL_ttf could not initialize! SDL_ttf Error: {0}", TTF_GetError());
+		if (IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG) < 0)
+			LOG_CRITICAL("Unable to initialize SDL_Image");
 
-        m_Renderer = CreateScope<Renderer>(props);
-    }
+		if (TTF_Init() == -1)
+			LOG_CRITICAL("SDL_ttf could not initialize! SDL_ttf Error: {0}", TTF_GetError());
 
-    RenderManager::~RenderManager()
-    {
-        LOG_INFO("Shutting down RenderManager");
+		m_Renderer = CreateScope<Renderer>(window);
+	}
 
-        SDL_Quit();
-        IMG_Quit();
-    }
+	RenderManager::~RenderManager()
+	{
+		LOG_INFO("Shutting down RenderManager");
 
-    void RenderManager::OnUpdate(float ts, const Ref<EntityManager>& entityManager)
-    {
-        m_Renderer->BeginScene();
+		TTF_Quit();
+		IMG_Quit();
+		SDL_Quit();
+	}
 
-        m_Camera.Reset();
+	void RenderManager::OnUpdate(const Ref<EntityManager>& entityManager)
+	{
+		m_Renderer->BeginScene();
 
-        auto view = entityManager->GetAllEntitiesWith<TagComponent, CameraComponent, TransformComponent>();
+		m_Camera.Reset();
 
-        for (auto entity : view)
-        {
-            m_Camera.Set(view.get<TransformComponent>(entity), view.get<CameraComponent>(entity));
-        }
+		auto view = entityManager->GetAllEntitiesWith<TagComponent, CameraComponent, TransformComponent>();
 
-        ASSERT(m_Camera, "Must have at least one camera");
+		for (auto entity : view)
+		{
+			m_Camera.Set(view.get<TransformComponent>(entity), view.get<CameraComponent>(entity));
+		}
 
-        m_Renderer->RenderEntities(entityManager, m_Camera);
-        m_Renderer->RenderUIText();
-        m_Renderer->RenderImGui();
+		ASSERT(m_Camera, "Must have at least one camera");
 
-        m_Renderer->EndScene();
-    }
+		m_Renderer->RenderEntities(entityManager, m_Camera);
+		RenderImGui();
 
-    Renderer* RenderManager::GetRenderer()
-    {
-        return m_Renderer.get();
-    }
+		m_Renderer->EndScene();
+	}
 
-    CameraData& RenderManager::GetCamera()
-    {
-        return m_Camera;
-    }
+	void RenderManager::OnUpdate(const ImGuiCallback& callback)
+	{
+		m_ImGuiCallback = callback;
+	}
 
-    void RenderManager::SetBackgroundColor(const glm::u8vec4& color)
-    {
-        m_Renderer->SetBackgroundColor(color);
-    }
+	Renderer* RenderManager::GetRenderer() const
+	{
+		return m_Renderer.get();
+	}
 
-    void RenderManager::UI_Text(const std::string& text, int textMultiplierFactor, const glm::vec2& pos, const glm::u8vec4& textColor)
-    {
-        m_Renderer->SubmitUITextForRender(text, textMultiplierFactor, pos, textColor);
-    }
+	const CameraData& RenderManager::GetCamera() const
+	{
+		return m_Camera;
+	}
+
+	void RenderManager::RenderImGui()
+	{
+		if (m_ImGuiCallback)
+			m_ImGuiCallback();
+	}
 
 }

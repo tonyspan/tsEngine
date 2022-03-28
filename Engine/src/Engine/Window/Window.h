@@ -1,15 +1,14 @@
 #pragma once
 
 #include "pch.h"
+
 #include "Engine/Core/Base.h"
 
-#include <SDL.h>
+constexpr uint32_t DEFAULT_WIDTH = 1600;
+constexpr uint32_t DEFAULT_HEIGHT = 900;
 
 namespace tsEngine
 {
-	constexpr uint32_t DEFAULT_WIDTH = 1600;
-	constexpr uint32_t DEFAULT_HEIGHT = 900;
-	
 	struct WindowProps
 	{
 		std::string Title;
@@ -17,6 +16,7 @@ namespace tsEngine
 		uint32_t Height;
 		std::string Icon;
 		bool VSync = false;
+		bool Maximized = false;
 
 		WindowProps(const std::string& title = "tsEngine", uint32_t width = DEFAULT_WIDTH, uint32_t height = DEFAULT_HEIGHT)
 			: Title(title), Width(width), Height(height)
@@ -27,31 +27,19 @@ namespace tsEngine
 	class Window
 	{
 	public:
-		Window(const WindowProps& props = WindowProps());
-		~Window();
+		virtual ~Window() = default;
 
-		SDL_Window* GetNativeWindow() const;
+		virtual void SetWidth(uint32_t width) = 0;
+		virtual void SetHeight(uint32_t height) = 0;
+		
+		virtual uint32_t GetWidth() const = 0;
+		virtual uint32_t GetHeight() const = 0;
 
-		void SetWidth(uint32_t width) { m_WindowData.Width = width; }
-		void SetHeight(uint32_t height) { m_WindowData.Height = height; }
+		virtual void SetVSync(bool enabled) = 0;
+		virtual bool IsVSync() const = 0;
 
-		uint32_t GetWidth() { return m_WindowData.Width; }
-		uint32_t GetHeight() { return m_WindowData.Height; }
+		virtual void* GetNativeWindow() const = 0;
 
-		bool GetVSync() { return m_WindowData.VSync; }
-
-		void SetWindowData(const WindowProps& props) { m_WindowData = props; }
-
-	private:
-		Window(const Window& other) = delete;
-		Window& operator=(Window& other) = delete;
-
-		bool Init(const WindowProps& props);
-		bool Shutdown();
-		void AddWindowIcon();
-	private:
-		WindowProps m_WindowData;
-		Scope2<SDL_Window, SDL_DestroyWindow> m_NativeWindow;
+		static Scope<Window> Create(const WindowProps& props = WindowProps());
 	};
 }
-

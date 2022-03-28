@@ -8,13 +8,11 @@ namespace tsEngine
 	struct KeyboardEvent : public Event
 	{
 		KeyboardEvent(bool pressed, int repeat, KeyCode scancode)
-			: Event("Keyboard"), Pressed(pressed), Repeat(repeat), Scancode(scancode)
+			: Event("KeyboardEvent"), Pressed(pressed), Repeat(repeat), Scancode(scancode)
 		{
 		}
 		
 		virtual ~KeyboardEvent() = default;
-
-		std::string GetName() const override { return Name; }
 
 		bool Pressed;
 		int Repeat;
@@ -29,8 +27,6 @@ namespace tsEngine
 		}
 
 		virtual ~KeyboardTypedEvent() = default;
-		
-		std::string GetName() const  override{ return Name; }
 
 		static inline void StartTextInput() { SDL_StartTextInput(); }
 		static inline void StopTextInput() { SDL_StopTextInput(); }

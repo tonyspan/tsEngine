@@ -1,8 +1,5 @@
 #include "SandboxApp.h"
 
-#include <Engine.h>
-#include <Engine/Core/EntryPoint.h>
-
 #include "../Scripts/CameraController.h"
 #include "../Scripts/Checkerboard.h"
 #include "../Scripts/GreenSquare.h"
@@ -16,11 +13,15 @@ void Sandbox::ClientDefWindowData()
 
 bool Sandbox::ClientDefInit()
 {
-    m_RenderManager->SetBackgroundColor({ 0, 0, 0, 1 });
+    m_RenderManager->GetRenderer()->SetBackgroundColor({ 0, 0, 0, 1 });
 
-    tsEngine::AssetManager::CreateTexture(m_RenderManager->GetRenderer(), "checkerboard", Constants::BG);
-    tsEngine::AssetManager::CreateTexture(m_RenderManager->GetRenderer(), "greensquare", Constants::GREEN);
-    tsEngine::AssetManager::CreateTexture(m_RenderManager->GetRenderer(), "redcircle", Constants::RED);
+    auto tex1 = tsEngine::Texture::Create(m_RenderManager->GetRenderer(), Constants::BG);
+    auto tex2 = tsEngine::Texture::Create(m_RenderManager->GetRenderer(), Constants::GREEN);
+    auto tex3 = tsEngine::Texture::Create(m_RenderManager->GetRenderer(), Constants::RED);
+
+    tsEngine::AssetManager::AddTexture("checkerboard", tex1);
+    tsEngine::AssetManager::AddTexture("greensquare", tex2);
+    tsEngine::AssetManager::AddTexture("redcircle", tex3);
 
     auto camera = m_EntityManager->CreateEntity("MainCamera");
     m_EntityManager->AddNativeScript<tsEngine::NativeScriptComponent>(camera).Bind<CameraController>();
@@ -50,21 +51,9 @@ bool Sandbox::ClientDefShutdown()
 
 void Sandbox::ClientDefOnEvent(tsEngine::Event& event)
 {
-    tsEngine::EventDispatcher dispatcher(&event);
-
-    dispatcher.Dispatch<tsEngine::KeyboardEvent>(ENGINE_BIND_FUNC(OnKeyPressedEvent));
-    dispatcher.Dispatch<tsEngine::MouseButtonEvent>(ENGINE_BIND_FUNC(OnMousePressedEvent));
-    dispatcher.Dispatch<tsEngine::MousePositionEvent>(ENGINE_BIND_FUNC(OnMouseMoveEvent));
 }
 
-void Sandbox::OnKeyPressedEvent(tsEngine::KeyboardEvent& event)
+tsEngine::Application* tsEngine::CreateApplication()
 {
-}
-
-void Sandbox::OnMousePressedEvent(tsEngine::MouseButtonEvent& event)
-{
-}
-
-void Sandbox::OnMouseMoveEvent(tsEngine::MousePositionEvent& event)
-{
+    return new Sandbox();
 }
