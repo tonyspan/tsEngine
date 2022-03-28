@@ -1,86 +1,52 @@
 #include "HierarchyPanel.h"
 
-// NOTE: No dynamic loading of scripts :(
 #include "../Scripts/BasicController.h"
 #include "../Scripts/DefaultScript.h"
 #include "../Scripts/BasicPhysics.h"
 
-HierarchyPanel::HierarchyPanel(const tsEngine::Ref<tsEngine::EntityManager>& context, const tsEngine::Ref<tsEngine::RenderManager>& context2)
+#include "imgui.h"
+
+static void ImGuiHelpMarker(const char* desc)
 {
-	SetContext(context, context2);
+	ImGui::TextDisabled("(?)");
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+		ImGui::TextUnformatted(desc);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
 }
 
-void HierarchyPanel::SetContext(const tsEngine::Ref<tsEngine::EntityManager>& context, const tsEngine::Ref<tsEngine::RenderManager>& context2)
+HierarchyPanel::HierarchyPanel(const tsEngine::Ref<tsEngine::EntityManager>& entityManager)
 {
-	m_Context = context;
-	m_Context2 = context2;
+	SetContext(entityManager);
+}
+
+void HierarchyPanel::SetContext(const tsEngine::Ref<tsEngine::EntityManager>& entityManager)
+{
+	m_Context = entityManager;
 	m_SelectedEntity = entt::null;
 }
 
 void HierarchyPanel::OnImGuiRender()
 {
-	bool active = false;
-	const ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove /*| ImGuiWindowFlags_NoBackground*/ | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-
-	ImGui::Begin("Scene Hierarchy", &active, winFlags);
-
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
-	static float w = 400.0f;
-	static float h = 400.0f;
-	ImGui::BeginChild("child1", ImVec2(w, h), true);
-	ImGui::LabelText("", "Workspace");
-	ImGui::Separator();
+	ImGui::Begin("Scene Hierarchy");
 
 	EntityHierarchy();
 
-	//ImGui::Separator();
-	ImGui::EndChild();
-	ImGui::SameLine();
-	ImGui::InvisibleButton("vsplitter", ImVec2(8.0f, h));
-	if (ImGui::IsItemActive())
-		w += ImGui::GetIO().MouseDelta.x;
+	ImGui::End();
 
-	ImGui::InvisibleButton("hsplitter", ImVec2(-1, 8.0f));
-	if (ImGui::IsItemActive())
-		h += ImGui::GetIO().MouseDelta.y;
-
-	ImGui::BeginChild("child3", ImVec2(w, 0), true);
-	ImGui::LabelText("", "Properties");
-	ImGui::Separator();
+	ImGui::Begin("Properties");
 
 	Properties();
-
-	ImGui::EndChild();
-	ImGui::SameLine();
-	ImGui::InvisibleButton("vsplitter2", ImVec2(8.0f, h));
-	if (ImGui::IsItemActive())
-		w += ImGui::GetIO().MouseDelta.x;
-
-	ImGui::PopStyleVar();
 
 	ImGui::End();
 }
 
 void HierarchyPanel::EntityHierarchy()
 {
-	ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
-	if (ImGui::Button("+", ImVec2(contentRegionAvailable.x, 0.0f)))
-	{
-		ImGui::OpenPopup("AddEntity");
-	}
-
-	if (ImGui::BeginPopup("AddEntity"))
-	{
-		if (ImGui::MenuItem("Create Empty Entity"))
-		{
-			auto entity = m_Context->CreateEntity("Empty Entity");
-			m_Context->AddComponent<tsEngine::TransformComponent>(entity, 0.0f, 0.0f, 100.0f, 100.0f);
-		}
-
-		ImGui::EndPopup();
-	}
-
 	m_Context->m_Registry.each([&](auto entity)
 	{
 		DrawEntityNode(entity);
@@ -88,26 +54,20 @@ void HierarchyPanel::EntityHierarchy()
 
 	if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::IsWindowHovered())
 		m_SelectedEntity = entt::null;
-
-	contentRegionAvailable = ImGui::GetContentRegionAvail();
-	ImGui::InvisibleButton("##LoadWorkspace", ImVec2(contentRegionAvailable.x, contentRegionAvailable.y));
-	if (ImGui::BeginDragDropTarget())
+	
+	ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
+	if (ImGui::InvisibleButton("##AddEntity", contentRegionAvailable, ImGuiButtonFlags_MouseButtonRight))
 	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+		ImGui::OpenPopup("AddEntity");
+	}
+	if (ImGui::BeginPopup("AddEntity"))
+	{
+		if (ImGui::MenuItem("Create Empty Entity"))
 		{
-			const wchar_t* path = (const wchar_t*)payload->Data;
-			std::filesystem::path loadPath = std::filesystem::path(tsEngine::AssetManager::s_BasePath) / path;
-
-			if (loadPath.extension().string() != ".tse")
-			{
-				LOG_WARN("Could not load {} - not a workspace file", loadPath.filename().string());
-			}
-			else
-			{
-				m_FileToBeDeserialized = loadPath;
-			}
+			auto entity = m_Context->CreateEntity("Empty Entity");
+			m_Context->AddComponent<tsEngine::TransformComponent>(entity, 0.0f, 0.0f, 100.0f, 100.0f);
 		}
-		ImGui::EndDragDropTarget();
+		ImGui::EndPopup();
 	}
 }
 
@@ -139,7 +99,7 @@ void HierarchyPanel::DrawEntityNode(entt::entity entity)
 	bool entityDeleted = false;
 	if (ImGui::BeginPopupContextItem())
 	{
-		if (ImGui::MenuItem("Delete Entity") /*&& m_Context->GetComponent<tsEngine::TagComponent>(entity).Tag != "MainCamera"*/)
+		if (ImGui::MenuItem("Delete Entity"))
 			entityDeleted = true;
 
 		ImGui::EndPopup();
@@ -212,7 +172,8 @@ static void DrawFloatControl(const std::string& label, float* value, float speed
 template<typename T, typename FUNC>
 static void DrawComponent(const std::string& name, const tsEngine::Ref<tsEngine::EntityManager>& entityManager, entt::entity entity, FUNC uiFunction)
 {
-	const ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
+	const ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth |
+											ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
 	if (entityManager->HasComponent<T>(entity))
 	{
 		auto& component = entityManager->GetComponent<T>(entity);
@@ -269,77 +230,29 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 
 	if (ImGui::BeginPopup("AddComponent"))
 	{
-		if (ImGui::MenuItem("Camera Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::CameraComponent>(entity))
-				m_Context->AddComponent<tsEngine::CameraComponent>(entity);
-			else
-				LOG_WARN("This entity already has the Camera Component");
-			ImGui::CloseCurrentPopup();
-		}
+		DrawComponentItem<tsEngine::CameraComponent>("Camera Component", entity);
+		DrawComponentItem<tsEngine::TransformComponent>("Transform Component", entity);
+		DrawComponentItem<tsEngine::SpriteComponent>("Sprite Component", entity);
+		DrawComponentItem<tsEngine::CircleComponent>("Circle Component", entity);
+		DrawComponentItem<tsEngine::MoverComponent>("Mover Component", entity);
 
-		if (ImGui::MenuItem("Transform Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::TransformComponent>(entity))
-				m_Context->AddComponent<tsEngine::TransformComponent>(entity);
-			else
-				LOG_WARN("This entity already has the Transform Component");
-			ImGui::CloseCurrentPopup();
-		}
+		DrawComponentItem<tsEngine::CollisionComponent>("Collision Component", entity, [](auto& entityManager, auto entity) {
+			// NOTE: By default CollisionShape is Circle
+			entityManager->GetComponent<tsEngine::CollisionComponent>(entity).Shape = tsEngine::CollisionShape::AABox;
+		});
 
-		if (ImGui::MenuItem("Sprite Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::SpriteComponent>(entity))
-				m_Context->AddComponent<tsEngine::SpriteComponent>(entity);
-			else
-				LOG_WARN("This entity already has the Sprite Component");
-			ImGui::CloseCurrentPopup();
-		}
+		DrawComponentItem<tsEngine::TextComponent>("Text Component", entity, [](auto& entityManager, auto entity) {
+			auto& t = entityManager->GetComponent<tsEngine::TextComponent>(entity);
+			t.Font = tsEngine::AssetManager::GetAsset<tsEngine::Font>("default");
+			t.Text = "Enter Text";
+		});
 
-		if (ImGui::MenuItem("Circle Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::CircleComponent>(entity))
-				m_Context->AddComponent<tsEngine::CircleComponent>(entity);
-			else
-				LOG_WARN("This entity already has the Circle Component");
-			ImGui::CloseCurrentPopup();
-		}
-
-		if (ImGui::MenuItem("Mover Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::MoverComponent>(entity))
-				m_Context->AddComponent<tsEngine::MoverComponent>(entity);
-			else
-				LOG_WARN("This entity already has the Mover Component");
-			ImGui::CloseCurrentPopup();
-		}
-
-		if (ImGui::MenuItem("Collision Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::CollisionComponent>(entity))
-			{
-				m_Context->AddComponent<tsEngine::CollisionComponent>(entity);
-				// NOTE: By default CollisionShape is Circle
-				m_Context->GetComponent<tsEngine::CollisionComponent>(entity).Shape = tsEngine::CollisionShape::AABox;
-			}
-			else
-				LOG_WARN("This entity already has the Collision Component");
-			ImGui::CloseCurrentPopup();
-		}
-
-		if (ImGui::MenuItem("Text Component"))
-		{
-			if (!m_Context->HasComponent<tsEngine::TextComponent>(entity))
-				m_Context->AddComponent<tsEngine::TextComponent>(entity);
-			else
-				LOG_WARN("This entity already has the Text Component");
-			ImGui::CloseCurrentPopup();
-		}
+		DrawComponentItem<tsEngine::AudioComponent>("Audio Component", entity);
 
 		if (ImGui::MenuItem("NativeScript Component"))
 		{
 			if (!m_Context->HasComponent<tsEngine::NativeScriptComponent>(entity))
-				m_Context->AddNativeScript<tsEngine::NativeScriptComponent>(entity).Bind<DefaultScript>();
+				m_Context->AddComponent<tsEngine::NativeScriptComponent>(entity).Bind<DefaultScript>();
 			else
 				LOG_WARN("This entity already has the NativeScript Component");
 			ImGui::CloseCurrentPopup();
@@ -373,24 +286,11 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 		/*static*/ glm::vec4 colorf = tsEngine::Maths::U8VecToFloatVec(component.Color);
 		ImGui::ColorEdit4("Color", glm::value_ptr(colorf));
 		component.Color = tsEngine::Maths::FloatVecToU8Vec(colorf);
-
-		ImGui::Button("Place Texture Here", ImVec2(235.0f, 0.0f));
-		if (ImGui::BeginDragDropTarget())
-		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
-			{
-				const wchar_t* path = (const wchar_t*)payload->Data;
-				std::filesystem::path texturePath = std::filesystem::path(tsEngine::AssetManager::s_BasePath) / path;
-
-				tsEngine::AssetManager::CreateTexture(m_Context2->GetRenderer(), texturePath.string());
-				component.Image = tsEngine::AssetManager::GetTexture(texturePath.string());
-			}
-			ImGui::EndDragDropTarget();
-		}
 		
 		ImGui::SameLine();
 		std::string msg = "Textures located on: " + tsEngine::AssetManager::s_AssetPath.string();
-		tsEngine::ImGuiHelpMarker(msg.c_str());
+		msg += "\nSelect an entity (hierarchy panel or viewwport) and drag a texture to viewport";
+		ImGuiHelpMarker(msg.c_str());
 
 		ImGui::Columns(1);
 
@@ -399,14 +299,15 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 			ImGui::TableNextColumn(); ImGui::Checkbox("FlipHorizontal", &component.FlipHorizontal);
 			ImGui::TableNextColumn(); ImGui::Checkbox("FlipVertical", &component.FlipVertical);
 			ImGui::TableNextColumn(); ImGui::Checkbox("DrawPhysicsCollider", &component.DrawPhysicsCollider);
-			ImGui::TableNextColumn(); ImGui::Checkbox("HasAnimation", &component.Animation);
+			ImGui::TableNextColumn(); ImGui::Checkbox("HasAnimation", &component.HasAnimation);
 			ImGui::EndTable();
 			
-			if (component.Animation)
+			if (component.HasAnimation)
 			{
 				ImGui::DragInt("Total Frames", &component.AnimationFrames, 1.0f, 1, 60);
 				ImGui::DragInt("Current Frame", &component.AnimationCurrentFrame, 1.0f, 0, 60);
-				ImGui::DragInt("Height", &component.Height, 1.0f, 1, 200);
+				ImGui::DragInt("Width", &component.Width, 1.0f, 1, 1024);
+				ImGui::DragInt("Height", &component.Height, 1.0f, 1, 1024);
 				ImGui::DragInt("Delay", &component.DelayPerFrame, 1.0f, 50, 300);
 			}
 		}
@@ -446,7 +347,7 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 		char buffer[256];
 		memset(buffer, 0, sizeof(buffer));
 		std::strncpy(buffer, component.Text.c_str(), sizeof(buffer));
-		if (ImGui::InputText("Text", buffer, sizeof(buffer)))
+		if (ImGui::InputTextMultiline("Text", buffer, sizeof(buffer)))
 		{
 			component.Text = std::string(buffer);
 		}
@@ -456,26 +357,44 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 		component.Color = tsEngine::Maths::FloatVecToU8Vec(colorf);
 
 		static const int multiplier = component.MultiplierFactor;
+		static const int multiplier2 = component.WrapWidth;
 		ImGui::DragInt("Multiplier", &component.MultiplierFactor, 0.5f, multiplier, 20);
+		ImGui::DragInt("WrapWidth", &component.WrapWidth, 0.5f, multiplier2, 50);
+		ImGui::Checkbox("Border", &component.HasBorder);
 
-		ImGui::Button("Place Font Here"/*, ImVec2(235.0f, 0.0f)*/);
+		ImGui::Button("Place Font Here", ImVec2(235.0f, 0.0f));
 		if (ImGui::BeginDragDropTarget())
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
 			{
 				const wchar_t* path = (const wchar_t*)payload->Data;
-				std::filesystem::path fontPath = std::filesystem::path(tsEngine::AssetManager::s_BasePath) / path;
+				std::filesystem::path filePath = std::filesystem::path(tsEngine::AssetManager::s_BasePath) / path;
 
-				tsEngine::AssetManager::AddFont(fontPath.string(), 10);
-				tsEngine::AssetManager::LoadFont(m_Context2->GetRenderer(), fontPath.string());
+				auto asset = tsEngine::Asset::IsSupported(filePath);
+
+				if (asset.Type == tsEngine::AssetType::Font)
+				{
+					auto font = tsEngine::Asset::Create<tsEngine::Font>(filePath.string(), 10);
+					tsEngine::AssetManager::AddAsset<tsEngine::Font>(filePath.string(), font);
+					component.Font = tsEngine::AssetManager::GetAsset<tsEngine::Font>(filePath.string());
+				}
+				else
+				{
+					LOG_WARN("Not a font format");
+				}
 			}
 			ImGui::EndDragDropTarget();
 		}
 
 		ImGui::SameLine();
 		std::string msg = "Fonts located on: " + tsEngine::AssetManager::s_AssetPath.string();
-		tsEngine::ImGuiHelpMarker(msg.c_str());
+		ImGuiHelpMarker(msg.c_str());
 
+	});
+
+	DrawComponent<tsEngine::AudioComponent>("Audio Component", m_Context, entity, [&](auto& component)
+	{
+			// TODO
 	});
 
 	// TODO: Dynamic script loading
@@ -484,7 +403,7 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 		ImGui::Text("Scripts");
 		std::string msg = "Script(s) located on: " + tsEngine::AssetManager::s_SciptPath.string();
 		ImGui::SameLine();
-		tsEngine::ImGuiHelpMarker(msg.c_str());
+		ImGuiHelpMarker(msg.c_str());
 		ImGui::Separator();
 
 		static int e = 0;
@@ -494,26 +413,26 @@ void HierarchyPanel::DrawComponents(entt::entity entity)
 
 		switch (e)
 		{
-		case 0:
-		{
-			tsEngine::Application::Get().UnloadScript(entity);
-			tsEngine::Application::Get().LoadScript<DefaultScript>(entity);
-			break;
-		}
-		case 1:
-		{
-			tsEngine::Application::Get().UnloadScript(entity);
-			tsEngine::Application::Get().LoadScript<BasicController>(entity);
-			break;
-		}
-		case 2:
-		{
-			tsEngine::Application::Get().UnloadScript(entity);
-			tsEngine::Application::Get().LoadScript<BasicPhysics>(entity);
-			break;
-		}
-		default:
-			break;
+			case 0:
+			{
+				tsEngine::NativeScript::UnloadScript(entity);
+				tsEngine::NativeScript::LoadScript<DefaultScript>(entity);
+				break;
+			}
+			case 1:
+			{
+				tsEngine::NativeScript::UnloadScript(entity);
+				tsEngine::NativeScript::LoadScript<BasicController>(entity);
+				break;
+			}
+			case 2:
+			{
+				tsEngine::NativeScript::UnloadScript(entity);
+				tsEngine::NativeScript::LoadScript<BasicPhysics>(entity);
+				break;
+			}
+			default:
+				break;
 		}
 	});
 }

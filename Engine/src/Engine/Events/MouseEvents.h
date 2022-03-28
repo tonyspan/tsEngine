@@ -1,30 +1,23 @@
 #pragma once
 
 #include "Events.h"
+#include "MouseCodes.h"
 
 #include <glm/glm.hpp>
 
 namespace tsEngine
 {
-	
-	enum class MouseButtonId
-	{
-		LMB = 1, MMB = 2, RMB = 3
-	};
-
 	struct MouseButtonEvent : public Event
 	{
 		MouseButtonEvent(bool down, int id, int clicks, bool clicked)
-			: Event("Mouse"), Down(down), ButtonId(static_cast<MouseButtonId>(id)), Clicks(clicks), Clicked(clicked)
+			: Event("MouseButtonEvent"), Down(down), ButtonId(static_cast<MouseCode>(id)), Clicks(clicks), Clicked(clicked)
 		{
 		}
-		
+
 		virtual ~MouseButtonEvent() = default;
 
-		std::string GetName() const override { return Name; }
-
 		bool Down;
-		MouseButtonId ButtonId;
+		MouseCode ButtonId;
 		int Clicks;
 		bool Clicked;
 	};
@@ -32,13 +25,11 @@ namespace tsEngine
 	struct MousePositionEvent : public Event
 	{
 		MousePositionEvent(const glm::vec2& pos, const glm::vec2& motion)
-			: Event("Position"), Position(pos), Motion(motion)
+			: Event("MousePositionEvent"), Position(pos), Motion(motion)
 		{
 		}
 
 		virtual ~MousePositionEvent() = default;
-
-		std::string GetName() const override { return Name; }
 
 		glm::vec2 Position;
 		glm::vec2 Motion;
@@ -47,13 +38,11 @@ namespace tsEngine
 	struct MouseWheelEvent : public Event
 	{
 		MouseWheelEvent(int direction)
-			: Event("Wheel"), Direction(direction)
+			: Event("MouseWheelEvent"), Direction(direction)
 		{
 		}
 		
 		virtual ~MouseWheelEvent() = default;
-
-		std::string GetName() const override { return Name; }
 
 		int Direction;
 	};

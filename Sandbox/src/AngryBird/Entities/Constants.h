@@ -18,4 +18,11 @@ namespace Game::Constants
 	constexpr char* MUSIC = "src/AngryBird/Assets/angry.mp3";
 
 	constexpr char* MAIN = "src/AngryBird/Assets/main.jpg";
+
+	enum class GameState
+	{
+		MainMenu = 0,
+		EndMenu,
+		Play
+	};
 }

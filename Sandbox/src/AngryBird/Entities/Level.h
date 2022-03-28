@@ -7,6 +7,10 @@ namespace Game
     class Level
     {
     public:
-        void OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, tsEngine::Texture* texture);
+        void OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager);
+        
+        void Reset();
+    private:
+        tsEngine::Ref<tsEngine::EntityManager> m_Context;
     };
 }

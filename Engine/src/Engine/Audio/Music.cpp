@@ -15,23 +15,21 @@ namespace tsEngine
 
     Music::~Music()
     {
-        if (Mus != nullptr)
-        {
-            Mix_FreeMusic(Mus);
-        }
+        if (m_Music != nullptr)
+            Mix_FreeMusic(m_Music);
     }
 
     bool Music::LoadMusic(const std::string& path)
     {
-        if (Mus != nullptr)
+        if (m_Music != nullptr)
         {
             LOG_WARN("Overwriting already loaded music with: {0}", path);
-            Mix_FreeMusic(Mus);
+            Mix_FreeMusic(m_Music);
         }
 
-        Mus = Mix_LoadMUS(path.c_str());
+        m_Music = Mix_LoadMUS(path.c_str());
 
-        if (Mus == nullptr)
+        if (m_Music == nullptr)
         {
             LOG_ERROR("Unable to load: {0}, Mix_LoadMUS error: {1}", path, Mix_GetError());
             return false;

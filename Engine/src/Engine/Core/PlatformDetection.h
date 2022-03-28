@@ -1,12 +1,23 @@
 #pragma once
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__)
-#define PLATFORM_WINDOWS
-#include <Windows.h>
-#elif defined(linux) || defined(__linux) || defined(__linux__)
-#define PLATFORM_LINUX
-#include <unistd.h>
-#include <dlfcn.h>
+#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__NT__)
+	#define PLATFORM_WINDOWS
+	#ifdef _WIN64
+	#else
+		#error "x86 Builds are not supported!"
+	#endif
+#elif __linux__
+	#define PLATFORM_LINUX
 #else
-#error "Unknown Platform"
+	#error "Unknown platform!"
+#endif
+
+#ifdef PLATFORM_WINDOWS
+	#define DEBUG_BREAK __debugbreak()
+	#define __PRETTY_FUNCTION__ __FUNCTION__
+#elif defined PLATFORM_LINUX
+	#include <signal.h>
+	#define DEBUG_BREAK raise(SIGTRAP)
+#else
+	#define DEBUG_BREAK
 #endif

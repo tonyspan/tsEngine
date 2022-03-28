@@ -2,108 +2,72 @@
 
 #include "Engine/Core/Base.h"
 
-//#include "Engine/Window/Window.h"
-
-#include "Engine/ECS/Components.h"
-
-#include "Engine/Utils/Utils.h"
-
 #include <glm/glm.hpp>
 
-#include <SDL_ttf.h>
-
 struct SDL_Renderer;
+struct SDL_RendererInfo;
 
 namespace tsEngine
 {
-    struct WindowProps;
-    class Window;
-    class EntityManager;
+	struct WindowProps;
+	class Window;
+	class EntityManager;
 
-    struct CameraData
-    {
-        TransformComponent* Transform = nullptr;
-        CameraComponent* Camera = nullptr;
+	class CameraData;
 
-        CameraData() = default;
+	class Texture;
 
-        operator bool() const { return (Transform != nullptr) || (Camera != nullptr); }
+	class Renderer
+	{
+	public:
+		Renderer(Window* window);
+		~Renderer();
 
-        void Reset()
-        {
-            Transform = nullptr;
-            Camera = nullptr;
-        }
+		void BeginScene() const;
+		void EndScene() const;
 
-        void Set(TransformComponent& tc, CameraComponent& cc)
-        {
-            Transform = &tc;
-            Camera = &cc;
-        }
-    };
+		void RenderEntities(const Ref<EntityManager>& entityManager, const CameraData& camera);
 
-    class Renderer
-    {
-    public:
-        Renderer(const WindowProps& props);
-        ~Renderer();
+		Ref<Texture> GetRenderTargetTexture() const;
 
-        void BeginScene() const;
-        void EndScene() const;
+		void OnResize(uint32_t width, uint32_t height);
 
-        void RenderEntities(const Ref<EntityManager>& entityManager, const CameraData& camera);
+		SDL_Renderer* GetNativeRenderer() const;
 
-        // UI related
-        void SubmitUITextForRender(const std::string& text, int MultiplierFactor, const glm::vec2& pos, const glm::u8vec4& textColor);
-        void RenderUIText();
+		// x, y correspond to (x,y) coords
+		// z, w correspond to width, height
+		void SetViewport(const glm::vec4& viewport);
 
-        void RenderImGui();
+		void SetBackgroundColor(const glm::u8vec4& color);
 
-        SDL_Renderer* GetNativeRenderer() const;
+		static glm::vec2 GetScreenPosition(const glm::vec2& targetPosition, const CameraData& camera);
+	private:
+		struct RenderStats;
+	public:
+		const RenderStats& GetStats() const { return m_Stats; }
+	private:
+		bool IsInsideScreen(const glm::vec2& targetPosition, const glm::vec2& targetSize, const CameraData& camera);
+	private:
+		Window* m_Window;
 
-        Window* GetWindow();
+		Ref<Texture> m_RenderTargetTexture;
 
-        void OpenFont(const std::string& fontPath, int fontSize);
+		glm::u8vec4 m_BackgroundColor;
 
-        void SetViewport(SDL_Rect& viewport);
+		Scope2<SDL_Renderer> m_NativeRenderer;
 
-        void SetBackgroundColor(const glm::u8vec4& color);
+		struct RenderStats
+		{
+			int RenderedEntities = 0;
+			Scope<SDL_RendererInfo> RendererInfo;
+		};
 
-        static glm::vec2 GetScreenPosition(const glm::vec2& targetPosition, const CameraData& camera);
-    private:
-        bool IsInsideScreen(const glm::vec2& targetPosition, const glm::vec2& targetSize, const CameraData& camera);
+		RenderStats m_Stats;
 
-        // UI related
-        // NOTE: UITextData struct and TextComponent are essentially the same
-        // TODO: Better names for functions
-        struct UITextData;
-        void RenderSubmittedUIText(std::vector<UITextData>& textData);
-        void RenderText(const UITextData& textData, bool showBorder = false);
+		friend class Texture;
+		friend class Serializer;
 
-        // Followed the SDL_RenderDrawXXXX convention
-        void RenderDrawCircle(SDL_Renderer* renderer, int centerX, int centerY, float radius);
-        void RenderDrawCircleFilled(SDL_Renderer* renderer, int centerX, int centerY, float radius, const glm::u8vec4& color);
-    private:
-        Scope<Window> m_Window;
-        int m_WindowWidth;
-        int m_WindowHeight;
-
-        struct UITextData
-        {
-            std::string Text;
-            int MultiplierFactor = 1;
-            glm::vec2 Position;
-            SDL_Color Color{};
-        };
-
-        std::vector<UITextData> m_UITextToBeRendered;
-
-        glm::u8vec4 m_BackgroundColor;
-
-        Scope2<TTF_Font, TTF_CloseFont> m_Font;
-        int m_FontWidth;
-        int m_FontHeight;
-
-        Scope2<SDL_Renderer, SDL_DestroyRenderer> m_NativeRenderer;
-    };
+		// For use on Serializer and Texure
+		static inline Renderer* s_Instance;
+	};
 }

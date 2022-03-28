@@ -6,13 +6,16 @@ namespace tsEngine
 {
 	struct Music
 	{
-		Mix_Music* Mus{};
-
+	public:
 		Music() = default;
 		Music(const std::string& path);
 		~Music();
 		
 		bool LoadMusic(const std::string& path);
+	private:
+		Mix_Music* m_Music{};
+
+		friend class AudioSystem;
 	};
 }
 

@@ -1,25 +1,32 @@
 #pragma once
 
-#include "Engine/Render/Renderer.h"
+#include "Engine/Core/Base.h"
 
-#include <SDL_ttf.h>
+#include "Engine/Asset/Asset.h"
+
+#include <glm/glm.hpp>
 
 struct SDL_Texture;
 
 namespace tsEngine
 {
-    struct Texture
-    {
-        Scope2<SDL_Texture, SDL_DestroyTexture> Tex;
+	class Renderer;
 
-        Texture() = default;
-        Texture(Renderer* renderer, const std::string& path);
-        ~Texture() = default;
-        
-        bool LoadTexture(Renderer* renderer, const std::string& path);
+	class Texture : public Asset
+	{
+	public:
+		Texture();
+		Texture(const std::string& path);
+		// NOTE: Plain texture (use as render target)
+		Texture(uint32_t width, uint32_t height);
+		~Texture();
 
-        // Helper function
-        // For usage on renderer, not to write sprite.Image->Tex.get()
-        static SDL_Texture* GetRaw(Texture* tex);
-    };
+		glm::vec2 Size() const;
+	protected:
+		void* Raw() const override { return Tex.get(); }
+	private:
+		Scope2<SDL_Texture> Tex;
+		uint32_t m_Width = 0;
+		uint32_t m_Height = 0;
+	};
 }

@@ -2,14 +2,14 @@
 
 #include "Engine/Log/Log.h"
 
-#include "Components.h"
-
 #include "entt.hpp"
 
 class HierarchyPanel;
 
 namespace tsEngine
 {
+	struct NativeScriptComponent;
+
 	class EntityManager
 	{
 	public:
@@ -18,17 +18,14 @@ namespace tsEngine
 
 		entt::entity CreateEntity(const std::string& name = std::string());
 		void DestroyEntity(entt::entity entity);
+		void DestroyEntityByTag(const std::string& tag);
 
 		template<typename T, typename... Args>
-		void AddComponent(entt::entity entity, Args&&... args)
+		decltype(auto) AddComponent(entt::entity entity, Args&&... args)
 		{
-			ASSERT((!std::is_same<T, NativeScriptComponent>::value), "Add NativeScriptComponent with AddNativeScript()");
 			ASSERT(!HasComponent<T>(entity), "Entity already has component");
 
-			// Can't return component ?
-			/*T& component =  */m_Registry.emplace<T>(entity, std::forward<Args>(args)...);
-
-			//return component;
+			return m_Registry.emplace<T>(entity, std::forward<Args>(args)...);
 		}
 
 		template<typename T>
@@ -59,30 +56,21 @@ namespace tsEngine
 			return m_Registry.view<Args...>();
 		}
 
-		template<typename T>
-		auto& AddNativeScript(entt::entity entity)
-		{
-			ASSERT((std::is_same<T, NativeScriptComponent>::value), "Component is not a NativeScriptComponent");
-			
-			m_Registry.emplace<T>(entity);
+		entt::entity FindEntityByTag(const std::string& tag);
 
-			return m_Registry.get<NativeScriptComponent>(entity);
-		}
+		// NOTE: Leftover from a different approach
+		auto& GetRegistry() { return m_Registry; }
 
-		// TODO: Not the best/proper way to access registry from ScriptableEntity or other places
-		auto& GetRegistry()
-		{
-			return m_Registry;
-		}
+		void Clear();
 
-		static void ClearRegistry(entt::registry& registry);
+		void CopyFrom(const Ref<EntityManager>& from);
 
-		// NOTE: Call CopyComponent for any newly added component
-		static void CopyRegistryAndComponents(entt::registry& dst, entt::registry& src);
-
+		// Set an entityManager as context to other subsystems
+		static void SetActive(const Ref<EntityManager>& entityManager);
+		static const Ref<EntityManager> GetActive();
 	private:
 		template<typename T>
-		static void CopyComponent(entt::registry& dst, entt::registry& src)
+		void CopyComponent(entt::registry& dst, entt::registry& src)
 		{
 			auto view = src.view<T>();
 

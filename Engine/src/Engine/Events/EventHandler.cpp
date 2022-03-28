@@ -4,28 +4,37 @@
 
 //#include "Engine/Log/Log.h"
 
+#include "Engine/Window/Window.h"
+
+#include "Events.h"
+#include "MouseEvents.h"
+#include "WindowEvents.h"
+#include "KeyboardEvents.h"
+
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 //#include "imgui_impl_sdlrenderer.h"
 
+#include <SDL.h>
+
 namespace tsEngine
 {	
-	extern MouseButtonEvent s_MouseEvent;
-	extern KeyboardEvent s_KeyboardEvent;
-	extern MousePositionEvent s_MousePositionEvent;
-	extern KeyboardTypedEvent s_KeyboardTypedEvent;
-	extern MouseWheelEvent s_Wheel;
+	extern MouseButtonEvent g_MouseEvent;
+	extern KeyboardEvent g_KeyboardEvent;
+	extern MousePositionEvent g_MousePositionEvent;
+	extern KeyboardTypedEvent g_KeyboardTypedEvent;
+	extern MouseWheelEvent g_Wheel;
 
 	EventHandler::EventHandler(Window* window)
-		: m_Window(window)
+		: m_Window(window), m_NativeHandler(CreateScope<SDL_Event>())
 	{
 	}
 
 	void EventHandler::OnUpdate()
 	{
-		while (SDL_PollEvent(&m_NativeHandler))
+		while (SDL_PollEvent(m_NativeHandler.get()))
 		{
-			ImGui_ImplSDL2_ProcessEvent(&m_NativeHandler);
+			ImGui_ImplSDL2_ProcessEvent(m_NativeHandler.get());
 
 			// NOTE: Not sure if this is placed correctly here
 			ImGuiIO& io = ImGui::GetIO();
@@ -44,7 +53,7 @@ namespace tsEngine
 
 	void EventHandler::OnQuit()
 	{
-		if (m_NativeHandler.type == SDL_QUIT)
+		if (m_NativeHandler->type == SDL_QUIT)
 		{
 			QuitEvent quit(true);
 			m_Callback(quit);
@@ -53,57 +62,57 @@ namespace tsEngine
 
 	void EventHandler::OnKeyPressed()
 	{
-		if (m_NativeHandler.type == SDL_KEYDOWN)
+		if (m_NativeHandler->type == SDL_KEYDOWN)
 		{
-			KeyboardEvent keyboard(true, m_NativeHandler.key.repeat, static_cast<KeyCode>(m_NativeHandler.key.keysym.scancode));
-			s_KeyboardEvent = keyboard;
+			KeyboardEvent keyboard(true, m_NativeHandler->key.repeat, static_cast<KeyCode>(m_NativeHandler->key.keysym.scancode));
+			g_KeyboardEvent = keyboard;
 			m_Callback(keyboard);
 		}
-		else if (m_NativeHandler.type == SDL_KEYUP)
+		else if (m_NativeHandler->type == SDL_KEYUP)
 		{
 			KeyboardEvent keyboard(false, 0, KeyCode::None);
-			s_KeyboardEvent = keyboard;
+			g_KeyboardEvent = keyboard;
 			m_Callback(keyboard);
 		}
 	}
 
 	void EventHandler::OnKeyTypedEvent()
 	{
-		if (m_NativeHandler.type == SDL_TEXTINPUT)
+		if (m_NativeHandler->type == SDL_TEXTINPUT)
 		{
-			KeyboardTypedEvent input(m_NativeHandler.text.text);
-			s_KeyboardTypedEvent = input;
+			KeyboardTypedEvent input(m_NativeHandler->text.text);
+			g_KeyboardTypedEvent = input;
 			m_Callback(input);
 		}
 	}
 
 	void EventHandler::OnMousePressed()
 	{
-		if (m_NativeHandler.type == SDL_MOUSEBUTTONDOWN)
+		if (m_NativeHandler->type == SDL_MOUSEBUTTONDOWN)
 		{
-			MouseButtonEvent mouse(true, m_NativeHandler.button.button, m_NativeHandler.button.clicks, true);
-			s_MouseEvent = mouse;
+			MouseButtonEvent mouse(true, m_NativeHandler->button.button, m_NativeHandler->button.clicks, true);
+			g_MouseEvent = mouse;
 			m_Callback(mouse);
 		}
-		else if (m_NativeHandler.type == SDL_MOUSEBUTTONUP)
+		else if (m_NativeHandler->type == SDL_MOUSEBUTTONUP)
 		{
-			MouseButtonEvent mouse(false, m_NativeHandler.button.button, m_NativeHandler.button.clicks, false);
-			s_MouseEvent = mouse;
+			MouseButtonEvent mouse(false, m_NativeHandler->button.button, m_NativeHandler->button.clicks, false);
+			g_MouseEvent = mouse;
 			m_Callback(mouse);
 		}
 		else
 		{
-			s_MouseEvent.Clicked = false;
+			g_MouseEvent.Clicked = false;
 		}
 	}
 
 	void EventHandler::OnWindowResize()
 	{
-		if (m_NativeHandler.type == SDL_WINDOWEVENT)
+		if (m_NativeHandler->type == SDL_WINDOWEVENT)
 		{
-			if (m_NativeHandler.window.event == SDL_WINDOWEVENT_RESIZED)
+			if (m_NativeHandler->window.event == SDL_WINDOWEVENT_RESIZED)
 			{
-				ResizeEvent resize(m_NativeHandler.window.data1, m_NativeHandler.window.data2);
+				ResizeEvent resize(m_NativeHandler->window.data1, m_NativeHandler->window.data2);
 				m_Callback(resize);
 			}
 		}
@@ -111,20 +120,20 @@ namespace tsEngine
 
 	void EventHandler::OnMousePositon()
 	{
-		if (m_NativeHandler.type == SDL_MOUSEMOTION)
+		if (m_NativeHandler->type == SDL_MOUSEMOTION)
 		{
-			MousePositionEvent pos({ m_NativeHandler.button.x, m_NativeHandler.button.y }, { m_NativeHandler.motion.xrel, m_NativeHandler.motion.yrel });
-			s_MousePositionEvent = pos;
+			MousePositionEvent pos({ m_NativeHandler->button.x, m_NativeHandler->button.y }, { m_NativeHandler->motion.xrel, m_NativeHandler->motion.yrel });
+			g_MousePositionEvent = pos;
 			m_Callback(pos);
 		}
 	}
 
 	void EventHandler::OnMouseWheel()
 	{
-		if (m_NativeHandler.type == SDL_MOUSEWHEEL)
+		if (m_NativeHandler->type == SDL_MOUSEWHEEL)
 		{
-			MouseWheelEvent wheel(m_NativeHandler.wheel.y);
-			s_Wheel = wheel;
+			MouseWheelEvent wheel(m_NativeHandler->wheel.y);
+			g_Wheel = wheel;
 			m_Callback(wheel);
 		}
 	}

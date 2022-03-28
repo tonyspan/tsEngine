@@ -26,4 +26,4 @@ namespace tsEngine
 #define LOG_ERROR(...) ::tsEngine::Log::GetLogger()->error(__VA_ARGS__)
 #define LOG_CRITICAL(...) ::tsEngine::Log::GetLogger()->critical(__VA_ARGS__)
 
-#define ASSERT(x, ...) if(!(x)) { ::tsEngine::Log::GetLogger()->critical(__VA_ARGS__); exit(1); }
+#define ASSERT(x, ...) if(!(x)) { ::tsEngine::Log::GetLogger()->critical("{0}: {1}", __PRETTY_FUNCTION__, fmt::format(__VA_ARGS__)); DEBUG_BREAK; }

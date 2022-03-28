@@ -4,38 +4,24 @@
 
 #include "Engine/Core/Base.h"
 #include "Engine/Core/Timestep.h"
+
 #include "Engine/Log/Log.h"
 
 #include "Engine/Window/Window.h"
-#include "Engine/Events/EventHandler.h"
-
-#include "Engine/ECS/EntityManager.h"
-#include "Engine/ECS/Components.h"
-#include "Engine/ECS/ScriptableEntity.h"
-
-#include "Engine/Render/Renderer.h"
-#include "Engine/Render/RenderManager.h"
-#include "Engine/Render/Texture.h"
-
-#include "Engine/Utils/AssetManager.h"
-#include "Engine/Utils/Random.h"
-
-#include "Engine/Audio/AudioManager.h"
-
-#include "Engine/Physics/PhysicsManager.h"
 
 namespace tsEngine
 {
-	static void SDLVersion()
-	{
-		SDL_version compiled;
-		SDL_version linked;
+	class EventHandler;
+	struct Event;
+	struct QuitEvent;
+	struct ResizeEvent;
 
-		SDL_VERSION(&compiled);
-		SDL_GetVersion(&linked);
-		LOG_INFO("Compiled SDL version: {}.{}.{}", compiled.major, compiled.minor, compiled.patch);
-		LOG_INFO("Linked SDL version: {}.{}.{}", linked.major, linked.minor, linked.patch);
-	}
+	class EntityManager;
+	class RenderSystem;
+	class PhysicsSystem;
+
+	class ImGuiContext;
+	class NativeScripting;
 
 	class Application
 	{
@@ -47,32 +33,18 @@ namespace tsEngine
 		int Run();
 		bool Shutdown();
 
-		static Application& Get() { return *s_Instance; }
-		
-		// NOTE: Stats is private
+		static Application& Get();
+
+		Window* GetWindow();
+
+	private:
 		struct Stats;
-		Stats& GetStats() { return m_Stats; }
+	public:
+		const Stats& GetStats() const { return m_Stats; }
 
-		void Close();
-		
-		template<typename T>
-		void LoadScript(entt::entity entity)
-		{
-			auto& nsc = m_EntityManager->AddNativeScript<NativeScriptComponent>(entity);
+		void Close() { m_Running = false; }
 
-			nsc.Bind<T>();
-
-			if (!nsc.Instance)
-			{
-				nsc.Instance = nsc.InstantiateScript();
-				nsc.Instance->EntityRef = entity;
-				nsc.Instance->RegistryRef = &m_EntityManager->GetRegistry();
-				nsc.Instance->OnCreate();
-			}
-		}
-
-		void UnloadScript(entt::entity entity);
-
+		Ref<ImGuiContext> GetImGui() { return m_ImGui; }
 	protected:
 		// To be overridden by the client
 		virtual void ClientDefWindowData() = 0;
@@ -81,14 +53,7 @@ namespace tsEngine
 		virtual bool ClientDefShutdown() = 0;
 		virtual void ClientDefOnEvent(Event& event) {}
 		virtual void ClientDefOnImGuiRender() {}
-
 	protected:
-		Ref<RenderManager> m_RenderManager;
-		Ref<PhysicsManager> m_PhysicsManager;
-		Ref<EntityManager> m_EntityManager;
-		Ref<AudioManager> m_AudioManager;
-		Ref<EventHandler> m_EventHandler;
-		
 		WindowProps m_WindowData;
 	private:
 		Application(const Application& other) = delete;
@@ -99,17 +64,16 @@ namespace tsEngine
 		void OnEvent(Event& event);
 
 		void OnUpdateSystems(Timestep ts);
-		
-		void OnInitScripts();
-		void OnUpdateScripts(Timestep ts);
-		void OnDestroyScripts();
 
-		void OnInitImGui();
 		void OnUpdateImGui();
-		void OnDestroyImGui();
 	private:
-		Window* m_Window = nullptr;
+		Scope<Window> m_Window;
+
 		bool m_Running = false;
+
+		Ref<RenderSystem> m_RenderManager;
+		Ref<EventHandler> m_EventHandler;
+		Ref<PhysicsSystem> m_PhysicsManager;
 
 		static inline Application* s_Instance;
 
@@ -117,12 +81,16 @@ namespace tsEngine
 		struct Stats
 		{
 			float FPS;
+			float Timestep;
 		};
 
-		static inline Stats m_Stats;
+		Stats m_Stats;
+
+		friend class ImGuiContext;
+		Ref<ImGuiContext> m_ImGui;
 	};
 
 	// To be defined in the client
-	extern Application* CreateApplication();
+	Application* CreateApplication();
 }
 

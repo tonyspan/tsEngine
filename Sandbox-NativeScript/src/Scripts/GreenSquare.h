@@ -10,7 +10,7 @@ public:
         AddComponent<tsEngine::TransformComponent>(100.0f, 100.0f, 200.0f, 200.0f);
         GetComponent<tsEngine::TransformComponent>().Rotation = 45.0f;
         AddComponent<tsEngine::SpriteComponent>();
-        GetComponent<tsEngine::SpriteComponent>().Image = tsEngine::AssetManager::GetTexture("greensquare");
+        GetComponent<tsEngine::SpriteComponent>().Image = tsEngine::AssetManager::GetAsset<tsEngine::Texture>("greensquare");
     }
 
     virtual void OnUpdate(float ts) override

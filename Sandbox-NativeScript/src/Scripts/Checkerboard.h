@@ -11,7 +11,7 @@ public:
     {
         AddComponent<tsEngine::TransformComponent>(0.0f, 0.0f, Constants::WIDTH, Constants::HEIGHT);
         AddComponent<tsEngine::SpriteComponent>();
-        GetComponent<tsEngine::SpriteComponent>().Image = tsEngine::AssetManager::GetTexture("checkerboard");
+        GetComponent<tsEngine::SpriteComponent>().Image = tsEngine::AssetManager::GetAsset<tsEngine::Texture>("checkerboard");
     }
 
     virtual void OnUpdate(float ts) override

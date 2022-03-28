@@ -8,13 +8,11 @@
 class Editor
 {
 public:
-	void OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, const tsEngine::Ref<tsEngine::RenderManager>& renderManager);
+	void OnCreate();
 	void OnUpdate();
 	void OnImGuiRender();
 	void OnEvent(tsEngine::Event& event);
 private:
-	void SetContext(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, const tsEngine::Ref<tsEngine::RenderManager>& renderManager);
-
 	void OnKeyPressedEvent(tsEngine::KeyboardEvent& event);
 	void OnMousePressedEvent(tsEngine::MouseButtonEvent& event);
 	void OnMouseMoveEvent(tsEngine::MousePositionEvent& event);
@@ -23,13 +21,14 @@ private:
 	template<typename T>
 	bool CheckEntityIfHoveredWith(const tsEngine::CameraData& camera, const glm::vec2& mousePos)
 	{
-		auto view = m_Context->GetAllEntitiesWith<tsEngine::TransformComponent, T>();
+		auto entityManager = tsEngine::EntityManager::GetActive();
+		auto view = entityManager->GetAllEntitiesWith<tsEngine::TransformComponent, T>();
 
 		for (auto entity : view)
 		{
-			auto& transform = view.get<tsEngine::TransformComponent>(entity);
+			auto& transform = entityManager->GetComponent<tsEngine::TransformComponent>(entity);
 
-			if (IsEntityHovered(transform, camera, m_MousePos))
+			if (IsEntityHovered(transform.Position, transform.Size, camera, mousePos))
 			{
 				m_HoveredEntity = entity;
 				return true;
@@ -39,33 +38,45 @@ private:
 		return false;
 	}
 
-	bool IsEntityHovered(const tsEngine::TransformComponent& transform, const tsEngine::CameraData& camera, const glm::vec2& mousePos);
+	bool IsEntityHovered(const glm::vec2& position, const glm::vec2& size, const tsEngine::CameraData& camera, const glm::vec2& mousePos);
 
-	void CalcViewport();
+	void UpdateViewport();
 
 	void New();
 	void Save();
 	void Load();
+
+	void OnEditorPlay();
+	void OnEditorStop();
 private:
 	entt::entity m_EditorCamera;
 
 	entt::entity m_HoveredEntity;
 
-	tsEngine::Ref<tsEngine::EntityManager> m_Context;
-	tsEngine::Ref<tsEngine::RenderManager> m_Context2;
-
-	// For when creating blank workspace (i.e when loading save file)
+	tsEngine::Ref<tsEngine::EntityManager> m_EntityManager;
 	tsEngine::Ref<tsEngine::EntityManager> m_EmptyEntityManager;
+	tsEngine::Ref<tsEngine::EntityManager> m_HelperEntityManager;
 
 	// For drag n drop (i.e move entities)
 	glm::vec2 m_MousePos;
 	glm::vec2 m_ClickOffset;
 
-	SDL_Rect m_Viewport;
+	glm::vec4 m_Viewport;
 
 	// Panels
 	HierarchyPanel m_HierarchyPanel;
-	ContentPanel m_AssetPanel;
+	ContentPanel m_ContentPanel;
 
-	std::string m_EditorLoadPath;
+	std::filesystem::path m_EditorLoadPath;
+
+	enum class EditorState
+	{
+		Edit = 0,
+		Play
+	};
+
+	EditorState m_State = EditorState::Edit;
+
+	tsEngine::Ref<tsEngine::Texture> m_Play;
+	tsEngine::Ref<tsEngine::Texture> m_Stop;
 };

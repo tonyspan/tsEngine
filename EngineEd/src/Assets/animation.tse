@@ -1,0 +1,30 @@
+Workspace: Untitled
+Entities:
+  - Entity: 1
+    TagComponent:
+      Tag: EditorCamera
+    TransformComponent:
+      Position: [0, 0]
+      Size: [1906, 985]
+      Rotation: 0
+    CameraComponent:
+      PanSpeed: 100
+  - Entity: 1048576
+    TagComponent:
+      Tag: Explosion
+    TransformComponent:
+      Position: [0, 0]
+      Size: [512, 512]
+      Rotation: 0
+    SpriteComponent:
+      Color: [1, 1, 1, 0]
+      Image: Assets\animation.png
+      FlipHorizontal: false
+      FlipVertical: false
+      DrawPhysicsCollider: false
+      Animation: true
+      AnimationFrames: 16
+      AnimationCurrentFrame: 0
+      Width: 132
+      Height: 132
+      DelayPerFrame: 100

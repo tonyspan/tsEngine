@@ -11,7 +11,7 @@ public:
         AddComponent<tsEngine::TransformComponent>(-480.0f, -220.0f, 300.0f, 250.0f);
         AddComponent<tsEngine::MoverComponent>();
         AddComponent<tsEngine::SpriteComponent>();
-        GetComponent<tsEngine::SpriteComponent>().Image = tsEngine::AssetManager::GetTexture("redcircle");
+        GetComponent<tsEngine::SpriteComponent>().Image = tsEngine::AssetManager::GetAsset<tsEngine::Texture>("redcircle");
     }
 
     virtual void OnUpdate(float ts) override

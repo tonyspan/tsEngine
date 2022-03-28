@@ -4,8 +4,13 @@
 
 #include "Engine/Log/Log.h"
 
+#include "Engine/ECS/EntityManager.h"
 #include "Engine/ECS/Components.h"
 
+#include "Engine/Render/Texture.h"
+#include "Engine/Render/Font.h"
+
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Utils/Utils.h"
 
 namespace YAML {
@@ -16,9 +21,11 @@ namespace YAML {
 		static Node encode(const glm::vec2& rhs)
 		{
 			Node node;
+			
 			node.push_back(rhs.x);
 			node.push_back(rhs.y);
 			node.SetStyle(EmitterStyle::Flow);
+			
 			return node;
 		}
 
@@ -29,6 +36,7 @@ namespace YAML {
 
 			rhs.x = node[0].as<float>();
 			rhs.y = node[1].as<float>();
+			
 			return true;
 		}
 	};
@@ -39,11 +47,13 @@ namespace YAML {
 		static Node encode(const glm::vec4& rhs)
 		{
 			Node node;
+			
 			node.push_back(rhs.x);
 			node.push_back(rhs.y);
 			node.push_back(rhs.z);
 			node.push_back(rhs.w);
 			node.SetStyle(EmitterStyle::Flow);
+			
 			return node;
 		}
 
@@ -56,6 +66,7 @@ namespace YAML {
 			rhs.y = node[1].as<float>();
 			rhs.z = node[2].as<float>();
 			rhs.w = node[3].as<float>();
+			
 			return true;
 		}
 	};
@@ -164,7 +175,22 @@ namespace tsEngine
 
 			auto& sc = m_Context->GetComponent<SpriteComponent>(entity);
 			out << YAML::Key << "Color" << YAML::Value << Maths::U8VecToFloatVec(sc.Color);
+			
+			if (sc.Image)
+				out << YAML::Key << "Image" << YAML::Value << std::filesystem::relative(sc.Image->GetPath(), AssetManager::s_BasePath).string();
+			else
+				out << YAML::Key << "Image" << YAML::Value << YAML::Null;
+
+			out << YAML::Key << "FlipHorizontal" << YAML::Value << sc.FlipHorizontal;
+			out << YAML::Key << "FlipVertical" << YAML::Value << sc.FlipVertical;
 			out << YAML::Key << "DrawPhysicsCollider" << YAML::Value << sc.DrawPhysicsCollider;
+
+			out << YAML::Key << "Animation" << YAML::Value << sc.HasAnimation;
+			out << YAML::Key << "AnimationFrames" << YAML::Value << sc.AnimationFrames;
+			out << YAML::Key << "AnimationCurrentFrame" << YAML::Value << sc.AnimationCurrentFrame;
+			out << YAML::Key << "Width" << YAML::Value << sc.Width;
+			out << YAML::Key << "Height" << YAML::Value << sc.Height;
+			out << YAML::Key << "DelayPerFrame" << YAML::Value << sc.DelayPerFrame;
 
 			out << YAML::EndMap; // SpriteComponent
 		}
@@ -199,8 +225,12 @@ namespace tsEngine
 			out << YAML::BeginMap; // TextComponent
 
 			auto& tc = m_Context->GetComponent<TextComponent>(entity);
+			out << YAML::Key << "Font" << YAML::Value << std::filesystem::relative(tc.Font->GetPath(), AssetManager::s_BasePath).string();
+			out << YAML::Key << "FontSize" << YAML::Value << tc.Font->FontSize;
 			out << YAML::Key << "Text" << YAML::Value << tc.Text;
 			out << YAML::Key << "MultiplierFactor" << YAML::Value << tc.MultiplierFactor;
+			out << YAML::Key << "WrapWidth" << YAML::Value << tc.WrapWidth;
+			out << YAML::Key << "Border" << YAML::Value << tc.HasBorder;
 			out << YAML::Key << "Color" << YAML::Value << Maths::U8VecToFloatVec(tc.Color);
 
 			out << YAML::EndMap; // TextComponent
@@ -296,7 +326,29 @@ namespace tsEngine
 					auto& src = m_Context->GetComponent<SpriteComponent>(deserializedEntity);
 
 					src.Color = Maths::FloatVecToU8Vec(spriteComponent["Color"].as<glm::vec4>());
+
+					auto texNode = spriteComponent["Image"];
+
+					if (!texNode.IsNull())
+					{
+						auto texPath = texNode.as<std::string>();
+						auto fullPath = AssetManager::s_BasePath / texPath;
+						auto tex = Asset::Create<Texture>(fullPath.string());
+						AssetManager::AddAsset<Texture>(texPath, tex);
+
+						src.Image = AssetManager::GetAsset<Texture>(texPath);
+					}
+					
+					src.FlipHorizontal = spriteComponent["FlipHorizontal"].as<bool>();
+					src.FlipVertical = spriteComponent["FlipVertical"].as<bool>();
 					src.DrawPhysicsCollider = spriteComponent["DrawPhysicsCollider"].as<bool>();
+
+					src.HasAnimation = spriteComponent["Animation"].as<bool>();
+					src.AnimationFrames = spriteComponent["AnimationFrames"].as<int>();
+					src.AnimationCurrentFrame = spriteComponent["AnimationCurrentFrame"].as<int>();
+					src.Width = spriteComponent["Width"].as<int>();
+					src.Height = spriteComponent["Height"].as<int>();
+					src.DelayPerFrame = spriteComponent["DelayPerFrame"].as<int>();
 				}
 
 				auto circleComponent = entity["CircleComponent"];
@@ -325,8 +377,16 @@ namespace tsEngine
 					m_Context->AddComponent<TextComponent>(deserializedEntity);
 					auto& tc = m_Context->GetComponent<TextComponent>(deserializedEntity);
 
+					auto font = textComponent["Font"].as<std::string>();
+					auto fullPath = AssetManager::s_BasePath / font;
+					auto fontSize = Asset::Create<Font>(fullPath.string(), textComponent["FontSize"].as<int>());
+					AssetManager::AddAsset<Font>(fullPath.string(), fontSize);
+					
+					tc.Font = AssetManager::GetAsset<Font>(fullPath.string());
 					tc.Text = textComponent["Text"].as<std::string>();
 					tc.MultiplierFactor = textComponent["MultiplierFactor"].as<int>();
+					tc.WrapWidth = textComponent["WrapWidth"].as<int>();
+					tc.HasBorder = textComponent["Border"].as<bool>();
 					tc.Color = Maths::FloatVecToU8Vec(textComponent["Color"].as<glm::vec4>());
 				}
 			}

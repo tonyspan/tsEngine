@@ -1,25 +1,24 @@
 #pragma once
 
-#include "Events.h"
-#include "MouseEvents.h"
-#include "WindowEvents.h"
-#include "KeyboardEvents.h"
+#include "Engine/Core/Base.h"
 
-#include "Engine/Window/Window.h"
+typedef union SDL_Event;
 
 namespace tsEngine
 {
-	using EventFn = std::function<void(Event&)>;
+	struct Event;
+	class Window;
 
 	class EventHandler
 	{
+		using EventFn = std::function<void(Event&)>;
 	public:
 		EventHandler(Window* window);
 
 		void OnUpdate();
 		void SetEventCallback(const EventFn& callback) { m_Callback = callback; }
 
-		SDL_Event* NativeEvent() { return &m_NativeHandler; }
+		SDL_Event* NativeEvent() { return m_NativeHandler.get(); }
 	private:
 		void OnQuit();
 		void OnKeyPressed();
@@ -30,7 +29,7 @@ namespace tsEngine
 		void OnMouseWheel();
 	private:
 		Window* m_Window;
-		SDL_Event m_NativeHandler;
+		Scope<SDL_Event> m_NativeHandler;
 		EventFn m_Callback;
 	};
 }

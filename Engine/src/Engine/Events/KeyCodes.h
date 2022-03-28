@@ -80,4 +80,6 @@ namespace tsEngine
 
 		None = 0
 	};
+
+	static const char* KeyCodeName(KeyCode keyCode) { return SDL_GetScancodeName(static_cast<SDL_Scancode>(keyCode)); }
 }

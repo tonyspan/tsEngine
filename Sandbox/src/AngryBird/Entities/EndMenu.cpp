@@ -5,44 +5,58 @@
 
 namespace Game
 {
-	bool EndMenu::s_HideMenu;
+	constexpr char* MenuName = "end";
+	constexpr char* UIGOName = "uiGameOver";
 
-	constexpr char* menuName = "end";
-
-	void EndMenu::OnCreate(const tsEngine::Ref<tsEngine::EntityManager>& entityManager, tsEngine::Texture* texure)
+	EndMenu::EndMenu()
+		: MenuBase(MenuName)
 	{
-		ASSERT(entityManager != nullptr, "Must pass valid pointer to entityManager Menu::OnCreate()");
-
-		auto endMenu = entityManager->CreateEntity(menuName);
-
-		AddMenuScreen(menuName);
-
-		entityManager->AddComponent<tsEngine::TransformComponent>(endMenu, GetMenuScreen(menuName));
-		entityManager->AddComponent<tsEngine::SpriteComponent>(endMenu);
-
-		entityManager->GetComponent<tsEngine::SpriteComponent>(endMenu).Image = texure;
-
-		s_HideMenu = true;
 	}
 
-	void EndMenu::OnUpdate(float ts, tsEngine::CameraData& camera, const tsEngine::Ref<tsEngine::AudioManager>& audioManager)
+	void EndMenu::OnCreate(const tsEngine::Ref<tsEngine::Texture>& texture)
 	{
-		if (!s_HideMenu)
-		{
-			camera.Transform->Position = GetMenuScreen(menuName);
+		CreateMenu(texture);
 
-			float r = tsEngine::Random::Float() / tsEngine::Random::Float();
-			
-			if (r < 0.4f)
-				audioManager->PlaySound("death");
-		}
-		else
-		{
-			camera.Transform->Position = GetDefaultScreen();
-		}
+		auto entityManager = tsEngine::EntityManager::GetActive();
+		auto ui = entityManager->CreateEntity(UIGOName);
+		entityManager->AddComponent<tsEngine::TransformComponent>(ui).Position = MenuGetPosition();
+		auto& text = entityManager->AddComponent<tsEngine::TextComponent>(ui);
+
+		text.Color = { 255, 255, 255, 0 };
+		text.Font = tsEngine::AssetManager::GetAsset<tsEngine::Font>("font");
+		text.HasBorder = false;
+		text.MultiplierFactor = 5;
+		text.Text = "Game Over";
 	}
 
-	void EndMenu::OnEvent(tsEngine::MouseButtonEvent& event)
+	void EndMenu::OnUpdate(float ts)
+	{
+		ShowMenu();
+
+		float r = tsEngine::Random::Float() / tsEngine::Random::Float();
+
+		if (r < 0.4f)
+			tsEngine::AudioSystem::PlaySound("death");
+	}
+
+	void EndMenu::OnEvent(tsEngine::Event& event)
+	{
+		tsEngine::EventDispatcher dispatcher(&event);
+
+		dispatcher.Dispatch<tsEngine::KeyboardEvent>(ENGINE_BIND_FUNC(OnKeyPressedEvent));
+		dispatcher.Dispatch<tsEngine::MouseButtonEvent>(ENGINE_BIND_FUNC(OnMousePressedEvent));
+		dispatcher.Dispatch<tsEngine::MousePositionEvent>(ENGINE_BIND_FUNC(OnMouseMoveEvent));
+	}
+
+	void EndMenu::OnKeyPressedEvent(tsEngine::KeyboardEvent& event)
+	{
+	}
+
+	void EndMenu::OnMousePressedEvent(tsEngine::MouseButtonEvent& event)
+	{
+	}
+
+	void EndMenu::OnMouseMoveEvent(tsEngine::MousePositionEvent& event)
 	{
 	}
 }
